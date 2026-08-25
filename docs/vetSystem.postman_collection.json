@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "vetSystem - Clinica Veterinaria Patitas Felices",
-    "description": "Coleccion de la API REST del TP de Microservicios (UP 2C 2026). Sprint 2: CRUD Duenio.",
+    "description": "Coleccion de la API REST del TP de Microservicios (UP 2C 2026). Sprints 2 y 3: CRUD Duenio + CRUD Mascota + endpoint anidado.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -91,6 +91,90 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/duenios/999"
+          }
+        },
+        {
+          "name": "GET mascotas de un duenio (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/duenios/1/mascotas"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mascotas",
+      "item": [
+        {
+          "name": "GET todas las mascotas (200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/mascotas"
+          }
+        },
+        {
+          "name": "GET mascota por id (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/mascotas/1"
+          }
+        },
+        {
+          "name": "POST crear mascota para duenio (201/404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/mascotas?duenioId=1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Firulais\",\n  \"especie\": \"Perro\",\n  \"raza\": \"Labrador\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST mascota con duenio inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/mascotas?duenioId=999",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Fantasma\",\n  \"especie\": \"Gato\",\n  \"raza\": \"Siames\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT actualizar mascota (200/404)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/mascotas/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Firulais II\",\n  \"especie\": \"Perro\",\n  \"raza\": \"Labrador Retriever\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE mascota (204/404)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/mascotas/1"
           }
         }
       ]

@@ -4,6 +4,7 @@ import com.vetSystem.Entity.Duenio;
 import com.vetSystem.Exception.DuplicateResourceException;
 import com.vetSystem.Exception.ResourceNotFoundException;
 import com.vetSystem.Service.DuenioService;
+import com.vetSystem.Service.MascotaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.List;
 public class DuenioController {
 
     private final DuenioService duenioService;
+    private final MascotaService mascotaService;
 
     // GET /api/duenios → lista todos los dueños
     @GetMapping
@@ -50,6 +52,16 @@ public class DuenioController {
     public ResponseEntity<?> updateDuenio(@PathVariable Long id, @RequestBody Duenio duenio) {
         try {
             return ResponseEntity.ok(duenioService.updateDuenio(id, duenio));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // GET /api/duenios/{id}/mascotas → endpoint anidado: las mascotas de un dueño
+    @GetMapping("/{id}/mascotas")
+    public ResponseEntity<?> getMascotasDelDuenio(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(mascotaService.getMascotasByDuenio(id));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         }

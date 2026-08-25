@@ -1,5 +1,6 @@
 package com.vetSystem.Entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,5 +26,6 @@ public class Mascota {
     private Date fecha;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "duenio_id", nullable = false)
+    @JsonBackReference  // Este lado se omite: no repite el dueño dentro de la mascota
     private Duenio duenio;
 }
