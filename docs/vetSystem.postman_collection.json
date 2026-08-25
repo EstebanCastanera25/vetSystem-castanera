@@ -1,0 +1,99 @@
+{
+  "info": {
+    "name": "vetSystem - Clinica Veterinaria Patitas Felices",
+    "description": "Coleccion de la API REST del TP de Microservicios (UP 2C 2026). Sprint 2: CRUD Duenio.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "Duenios",
+      "item": [
+        {
+          "name": "GET todos los duenios (200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/duenios"
+          }
+        },
+        {
+          "name": "GET duenio por id (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/duenios/1"
+          }
+        },
+        {
+          "name": "POST crear duenio (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/duenios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Garcia\",\n  \"cedula\": \"30111222\",\n  \"telefono\": 1155667788,\n  \"email\": \"ana.garcia@mail.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST cedula duplicada (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/duenios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Otra\",\n  \"apellido\": \"Persona\",\n  \"cedula\": \"30111222\",\n  \"telefono\": 1100000000,\n  \"email\": \"otra@mail.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT actualizar duenio (200/404)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/duenios/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana Maria\",\n  \"apellido\": \"Garcia\",\n  \"telefono\": 1199887766,\n  \"email\": \"ana.nueva@mail.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE duenio (204/404)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/duenios/1"
+          }
+        },
+        {
+          "name": "GET duenio inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/duenios/999"
+          }
+        }
+      ]
+    }
+  ]
+}
