@@ -15,4 +15,7 @@ public interface DuenioRepository extends JpaRepository<Duenio, Long> {
 
     // SELECT * FROM duenios WHERE email = ?
     Optional<Duenio> findByEmail(String email);
+
+    // Usado por buscarPorString del contrato InterfaceService
+    Optional<Duenio> findByNombre(String nombre);
 }

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "vetSystem - Clinica Veterinaria Patitas Felices",
-    "description": "Coleccion de la API REST del TP de Microservicios (UP 2C 2026). Sprints 2 y 3: CRUD Duenio + CRUD Mascota + endpoint anidado.",
+    "description": "Coleccion de la API REST del TP de Microservicios (UP 2C 2026). Sprints 2-4: CRUD Duenio + CRUD Mascota + endpoint anidado + DTOs con MapStruct + CRUD Veterinario + CRUD Turno con validacion de superposicion.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -120,7 +120,7 @@
           }
         },
         {
-          "name": "POST crear mascota para duenio (201/404)",
+          "name": "POST crear mascota (201/404) - duenioId en el body (Sprint 4)",
           "request": {
             "method": "POST",
             "header": [
@@ -129,10 +129,10 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/mascotas?duenioId=1",
+            "url": "{{baseUrl}}/api/mascotas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Firulais\",\n  \"especie\": \"Perro\",\n  \"raza\": \"Labrador\"\n}"
+              "raw": "{\n  \"nombre\": \"Firulais\",\n  \"especie\": \"Perro\",\n  \"raza\": \"Labrador\",\n  \"fechaNacimiento\": \"2024-03-15\",\n  \"duenioId\": 1\n}"
             }
           }
         },
@@ -146,10 +146,10 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrl}}/api/mascotas?duenioId=999",
+            "url": "{{baseUrl}}/api/mascotas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Fantasma\",\n  \"especie\": \"Gato\",\n  \"raza\": \"Siames\"\n}"
+              "raw": "{\n  \"nombre\": \"Fantasma\",\n  \"especie\": \"Gato\",\n  \"raza\": \"Siames\",\n  \"fechaNacimiento\": \"2023-01-01\",\n  \"duenioId\": 999\n}"
             }
           }
         },
@@ -166,7 +166,7 @@
             "url": "{{baseUrl}}/api/mascotas/1",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Firulais II\",\n  \"especie\": \"Perro\",\n  \"raza\": \"Labrador Retriever\"\n}"
+              "raw": "{\n  \"nombre\": \"Firulais II\",\n  \"especie\": \"Perro\",\n  \"raza\": \"Labrador Retriever\",\n  \"fechaNacimiento\": \"2024-03-15\"\n}"
             }
           }
         },
@@ -175,6 +175,157 @@
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/api/mascotas/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Veterinarios",
+      "item": [
+        {
+          "name": "GET todos los veterinarios (200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/veterinarios"
+          }
+        },
+        {
+          "name": "GET veterinario por id (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/veterinarios/1"
+          }
+        },
+        {
+          "name": "POST crear veterinario (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/veterinarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Leandro\",\n  \"apellido\": \"Perez\",\n  \"matricula\": \"MV-4521\",\n  \"especialidad\": \"Clinica General\",\n  \"email\": \"lperez@vet.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST matricula duplicada (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/veterinarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sofia\",\n  \"apellido\": \"Mendez\",\n  \"matricula\": \"MV-4521\",\n  \"especialidad\": \"Dermatologia\",\n  \"email\": \"smendez@vet.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT actualizar veterinario (200/404)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/veterinarios/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Leandro Martin\",\n  \"apellido\": \"Perez\",\n  \"especialidad\": \"Cirugia\",\n  \"email\": \"lmperez@vet.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE veterinario (204/404)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/veterinarios/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Turnos",
+      "item": [
+        {
+          "name": "GET todos los turnos (200)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/turnos"
+          }
+        },
+        {
+          "name": "GET turno por id (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/turnos/1"
+          }
+        },
+        {
+          "name": "POST crear turno (201/404/409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/turnos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"2026-09-10\",\n  \"hora\": \"10:30:00\",\n  \"motivo\": \"Control anual\",\n  \"mascotaId\": 1,\n  \"veterinarioId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "POST turno superpuesto (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/turnos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"2026-09-10\",\n  \"hora\": \"10:30:00\",\n  \"motivo\": \"Vacuna\",\n  \"mascotaId\": 1,\n  \"veterinarioId\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "GET agenda del veterinario (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/turnos/agenda?veterinarioId=1&fecha=2026-09-10"
+          }
+        },
+        {
+          "name": "GET historial de una mascota (200/404)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/turnos/mascota/1"
+          }
+        },
+        {
+          "name": "PATCH actualizar estado (200/404)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/turnos/1/estado?estado=ATENDIDO&observaciones=Consulta sin novedades"
           }
         }
       ]

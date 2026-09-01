@@ -1,6 +1,5 @@
 package com.vetSystem.Entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,6 +25,5 @@ public class Duenio {
     @Column(nullable = false)
     private String email;
     @OneToMany(mappedBy = "duenio", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference  // Este lado se serializa: incluye la lista de mascotas
     private List<Mascota> mascotas;
 }

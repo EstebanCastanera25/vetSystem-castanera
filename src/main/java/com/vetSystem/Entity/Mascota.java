@@ -1,12 +1,11 @@
 package com.vetSystem.Entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "mascotas")
@@ -23,9 +22,8 @@ public class Mascota {
     private String especie;
     @Column
     private String raza;
-    private Date fecha;
+    private LocalDate fechaNacimiento;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "duenio_id", nullable = false)
-    @JsonBackReference  // Este lado se omite: no repite el dueño dentro de la mascota
     private Duenio duenio;
 }

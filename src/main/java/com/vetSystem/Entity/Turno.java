@@ -5,7 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "turnos")
@@ -17,9 +18,13 @@ public class Turno {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
-    private Date fecha;
+    private LocalDate fecha;
+    @Column(nullable = false)
+    private LocalTime hora;
     @Column
     private String motivo;
+    @Column
+    private String observaciones;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoTurno estado;

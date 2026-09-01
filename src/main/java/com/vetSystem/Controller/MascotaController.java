@@ -1,6 +1,6 @@
 package com.vetSystem.Controller;
 
-import com.vetSystem.Entity.Mascota;
+import com.vetSystem.DTO.MascotaDTO;
 import com.vetSystem.Exception.ResourceNotFoundException;
 import com.vetSystem.Service.MascotaService;
 import lombok.RequiredArgsConstructor;
@@ -17,28 +17,26 @@ public class MascotaController {
 
     private final MascotaService mascotaService;
 
-    // GET /api/mascotas → lista todas las mascotas
+    // GET /api/mascotas → lista todas las mascotas (DTO plano con duenioId/duenioNombre)
     @GetMapping
-    public ResponseEntity<List<Mascota>> getAllMascotas() {
-        return ResponseEntity.ok(mascotaService.getAllMascotas());
+    public ResponseEntity<List<MascotaDTO>> getAllMascotas() {
+        return ResponseEntity.ok(mascotaService.listarEntidades());
     }
 
     // GET /api/mascotas/{id} → busca una mascota por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Mascota> getMascotaById(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(mascotaService.getMascotaById(id));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<MascotaDTO> getMascotaById(@PathVariable Long id) {
+        return mascotaService.buscarPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // POST /api/mascotas?duenioId=1 → crea una mascota para ese dueño
+    // POST /api/mascotas → crea una mascota; el dueño viaja como duenioId en el body
+    // (antes era ?duenioId= por query param — con DTOs el request queda autocontenido)
     @PostMapping
-    public ResponseEntity<?> createMascota(@RequestParam Long duenioId,
-                                           @RequestBody Mascota mascota) {
+    public ResponseEntity<?> createMascota(@RequestBody MascotaDTO dto) {
         try {
-            Mascota nueva = mascotaService.createMascota(duenioId, mascota);
+            MascotaDTO nueva = mascotaService.registrarEntidad(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body(nueva);  // HTTP 201
         } catch (ResourceNotFoundException e) {
             // El dueño no existe → no se puede crear la mascota
@@ -48,10 +46,10 @@ public class MascotaController {
 
     // PUT /api/mascotas/{id} → actualiza una mascota existente
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMascota(@PathVariable Long id,
-                                           @RequestBody Mascota mascota) {
+    public ResponseEntity<?> updateMascota(@PathVariable Long id, @RequestBody MascotaDTO dto) {
         try {
-            return ResponseEntity.ok(mascotaService.updateMascota(id, mascota));
+            dto.setId(id);  // el id de la URL manda sobre el del body
+            return ResponseEntity.ok(mascotaService.modificarEntidad(dto));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -61,7 +59,7 @@ public class MascotaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMascota(@PathVariable Long id) {
         try {
-            mascotaService.deleteMascota(id);
+            mascotaService.eliminarEntidad(id);
             return ResponseEntity.noContent().build();  // HTTP 204
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.notFound().build();

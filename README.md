@@ -27,8 +27,8 @@ Sistema de gestión de la clínica veterinaria. Fase 1: monolito MVC con Spring 
 3. Desde la raíz del proyecto:
 
    ```bash
-   # Windows
-   mvnw.cmd spring-boot:run
+   # Windows (en PowerShell el .\ es obligatorio; en CMD es opcional)
+   .\mvnw.cmd spring-boot:run
    # Linux / Mac
    ./mvnw spring-boot:run
    ```
