@@ -3,6 +3,7 @@ package com.vetSystem.DTO;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -10,20 +11,26 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+@Schema(description = "Datos necesarios para solicitar un turno veterinario")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class TurnoRequestDTO {
 
+    @Schema(description = "Fecha programada para el turno", example = "2030-03-15")
     @NotNull(message = "La fecha es obligatoria")
     @FutureOrPresent(message = "La fecha del turno no puede ser en el pasado")
     private LocalDate fecha;
+    @Schema(description = "Hora programada para el turno", example = "10:30:00", type = "string")
     @NotNull(message = "La hora es obligatoria")
     private LocalTime hora;
+    @Schema(description = "Motivo de la consulta veterinaria", example = "Control anual y vacunacion")
     private String motivo;
+    @Schema(description = "Identificador de la mascota que será atendida", example = "1")
     @NotNull(message = "El mascotaId es obligatorio")
     @Positive(message = "El mascotaId debe ser positivo")
     private Long mascotaId;
+    @Schema(description = "Identificador del veterinario que atenderá el turno", example = "1")
     @NotNull(message = "El veterinarioId es obligatorio")
     @Positive(message = "El veterinarioId debe ser positivo")
     private Long veterinarioId;
