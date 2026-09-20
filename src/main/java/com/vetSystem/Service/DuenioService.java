@@ -9,6 +9,7 @@ import com.vetSystem.Repository.DuenioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,15 +23,22 @@ public class DuenioService implements InterfaceService<DuenioDTO> {
     // Listar todos los dueños como DTO (la entidad JPA no sale del service)
     @Override
     public List<DuenioDTO> listarEntidades() {
-        return duenioRepository.findAll().stream()
-                .map(duenioMapper::toDTO)
-                .toList();
+        List<Duenio> duenios = duenioRepository.findAll();
+        List<DuenioDTO> resultado = new ArrayList<>();
+        for (Duenio duenio : duenios) {
+            resultado.add(duenioMapper.toDTO(duenio));
+        }
+        return resultado;
     }
 
     // Buscar por ID — Optional vacío si no existe (el controller decide el 404)
     @Override
     public Optional<DuenioDTO> buscarPorId(Long id) {
-        return duenioRepository.findById(id).map(duenioMapper::toDTO);
+        Optional<Duenio> duenio = duenioRepository.findById(id);
+        if (duenio.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(duenioMapper.toDTO(duenio.get()));
     }
 
     // Registrar un nuevo dueño — valida cédula duplicada
@@ -67,6 +75,10 @@ public class DuenioService implements InterfaceService<DuenioDTO> {
     // Buscar por nombre
     @Override
     public Optional<DuenioDTO> buscarPorString(String nombre) {
-        return duenioRepository.findByNombre(nombre).map(duenioMapper::toDTO);
+        Optional<Duenio> duenio = duenioRepository.findByNombre(nombre);
+        if (duenio.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(duenioMapper.toDTO(duenio.get()));
     }
 }

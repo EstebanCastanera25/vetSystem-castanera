@@ -9,6 +9,7 @@ import com.vetSystem.Repository.VeterinarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,15 +35,22 @@ public class VeterinarioService implements InterfaceService<VeterinarioDTO> {
     // Busca por ID y devuelve un Optional vacío cuando no existe
     @Override
     public Optional<VeterinarioDTO> buscarPorId(Long id) {
-        return veterinarioRepository.findById(id).map(veterinarioMapper::toDTO);
+        Optional<Veterinario> veterinario = veterinarioRepository.findById(id);
+        if (veterinario.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(veterinarioMapper.toDTO(veterinario.get()));
     }
 
     // Lista todos los veterinarios como DTO
     @Override
     public List<VeterinarioDTO> listarEntidades() {
-        return veterinarioRepository.findAll().stream()
-                .map(veterinarioMapper::toDTO)
-                .toList();
+        List<Veterinario> veterinarios = veterinarioRepository.findAll();
+        List<VeterinarioDTO> resultado = new ArrayList<>();
+        for (Veterinario veterinario : veterinarios) {
+            resultado.add(veterinarioMapper.toDTO(veterinario));
+        }
+        return resultado;
     }
 
     // Modifica los datos editables de un veterinario existente
@@ -71,6 +79,10 @@ public class VeterinarioService implements InterfaceService<VeterinarioDTO> {
     // Busca un veterinario por su matrícula
     @Override
     public Optional<VeterinarioDTO> buscarPorString(String valor) {
-        return veterinarioRepository.findByMatricula(valor).map(veterinarioMapper::toDTO);
+        Optional<Veterinario> veterinario = veterinarioRepository.findByMatricula(valor);
+        if (veterinario.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(veterinarioMapper.toDTO(veterinario.get()));
     }
 }

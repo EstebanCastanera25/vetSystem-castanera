@@ -12,7 +12,9 @@ Sistema de gestión de la clínica veterinaria. Fase 1: monolito MVC con Spring 
 
 - Java 21
 - Spring Boot 4.1.0 (Spring Web MVC, Spring Data JPA, Lombok, DevTools)
-- MySQL 8 (base `vet_system`)
+- MapStruct 1.5.5 (mapeo Entity ↔ DTO) + Bean Validation
+- MySQL 8 (base `vet_system`) · H2 en memoria solo para los tests
+- JUnit 5 + Mockito + MockMvc
 - Maven (wrapper incluido, no hace falta instalarlo)
 
 ## Cómo levantar el proyecto
@@ -62,3 +64,29 @@ Diagrama de clases: [docs/diagrama-clases.md](docs/diagrama-clases.md)
 | `sprint-01` | Setup del proyecto + modelo de dominio (4 entidades JPA) |
 | `sprint-02` | Arquitectura MVC + API REST + CRUD de Dueño |
 | `sprint-03` | Relaciones JPA + CRUD de Mascota + JSON circular resuelto |
+| `sprint-04` | DTOs + MapStruct + CRUD de Veterinario y Turno (con validación de superposición) |
+| `sprint-05` | Bean Validation en los DTOs + `GlobalExceptionHandler` + `ErrorResponse` |
+| `sprint-06` | Tests automatizados: JUnit 5 + Mockito (Service) y MockMvc (Controller) |
+
+## Tests
+
+```bash
+.\mvnw.cmd test                              # todos
+.\mvnw.cmd test "-Dtest=DuenioServiceTest"   # una sola clase
+.\mvnw.cmd test "-Dsurefire.runOrder=random" # verifica que los tests sean independientes
+```
+
+**No hace falta tener MySQL levantado**: los tests corren contra una base H2 en memoria
+(`src/test/resources/application.properties`, que reemplaza al de `src/main` en el classpath de test).
+
+| Clase | Tipo | Qué cubre |
+|---|---|---|
+| `DuenioServiceTest` | Unitario (Mockito, sin Spring) | Listado, búsqueda, alta con cédula duplicada, baja inexistente |
+| `TurnoServiceTest` | Unitario (Mockito, sin Spring) | Alta de turno y la regla de superposición de horarios |
+| `DuenioControllerTest` | Web slice (`@WebMvcTest` + MockMvc) | Contrato HTTP: 200 / 201 / 400 / 404 / 409 |
+| `VetSystemApplicationTests` | Contexto (`@SpringBootTest` sobre H2) | Que el contexto de Spring levante y el esquema se genere |
+
+> Nota para Spring Boot 4.1: `@MockBean` fue removido — se usa `@MockitoBean`
+> (`org.springframework.test.context.bean.override.mockito`). `@WebMvcTest` se importa de
+> `org.springframework.boot.webmvc.test.autoconfigure`. Y el `ObjectMapper` es el de Jackson 3
+> (`tools.jackson.databind`), no el de `com.fasterxml`.

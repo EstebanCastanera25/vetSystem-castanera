@@ -6,8 +6,8 @@ import com.vetSystem.Entity.EstadoTurno;
 import com.vetSystem.Entity.Mascota;
 import com.vetSystem.Entity.Turno;
 import com.vetSystem.Entity.Veterinario;
-import com.vetSystem.Exception.DuplicateResourceException;
 import com.vetSystem.Exception.ResourceNotFoundException;
+import com.vetSystem.Exception.TurnoSuperpuestoException;
 import com.vetSystem.Mapper.TurnoMapper;
 import com.vetSystem.Repository.MascotaRepository;
 import com.vetSystem.Repository.TurnoRepository;
@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,14 +34,21 @@ public class TurnoService {
 
     @Transactional(readOnly = true)
     public List<TurnoResponseDTO> listarTurnos() {
-        return turnoRepository.findAll().stream()
-                .map(turnoMapper::toDTO)
-                .toList();
+        List<Turno> turnos = turnoRepository.findAll();
+        List<TurnoResponseDTO> resultado = new ArrayList<>();
+        for (Turno turno : turnos) {
+            resultado.add(turnoMapper.toDTO(turno));
+        }
+        return resultado;
     }
 
     @Transactional(readOnly = true)
     public Optional<TurnoResponseDTO> buscarPorId(Long id) {
-        return turnoRepository.findById(id).map(turnoMapper::toDTO);
+        Optional<Turno> turno = turnoRepository.findById(id);
+        if (turno.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(turnoMapper.toDTO(turno.get()));
     }
 
     // Agenda: turnos de un veterinario en una fecha
@@ -49,9 +57,12 @@ public class TurnoService {
         if (!veterinarioRepository.existsById(veterinarioId)) {
             throw new ResourceNotFoundException("Veterinario", veterinarioId);
         }
-        return turnoRepository.findByVeterinarioIdAndFecha(veterinarioId, fecha).stream()
-                .map(turnoMapper::toDTO)
-                .toList();
+        List<Turno> turnos = turnoRepository.findByVeterinarioIdAndFecha(veterinarioId, fecha);
+        List<TurnoResponseDTO> resultado = new ArrayList<>();
+        for (Turno turno : turnos) {
+            resultado.add(turnoMapper.toDTO(turno));
+        }
+        return resultado;
     }
 
     // Historial de turnos de una mascota
@@ -60,9 +71,12 @@ public class TurnoService {
         if (!mascotaRepository.existsById(mascotaId)) {
             throw new ResourceNotFoundException("Mascota", mascotaId);
         }
-        return turnoRepository.findByMascotaIdOrderByFechaDescHoraDesc(mascotaId).stream()
-                .map(turnoMapper::toDTO)
-                .toList();
+        List<Turno> turnos = turnoRepository.findByMascotaIdOrderByFechaDescHoraDesc(mascotaId);
+        List<TurnoResponseDTO> resultado = new ArrayList<>();
+        for (Turno turno : turnos) {
+            resultado.add(turnoMapper.toDTO(turno));
+        }
+        return resultado;
     }
 
     @Transactional
@@ -78,7 +92,7 @@ public class TurnoService {
         // 3. Regla de negocio: un veterinario no puede tener dos turnos a la misma hora
         if (turnoRepository.existsByVeterinarioIdAndFechaAndHora(
                 request.getVeterinarioId(), request.getFecha(), request.getHora())) {
-            throw new DuplicateResourceException("El veterinario ya tiene un turno el "
+            throw new TurnoSuperpuestoException("El veterinario ya tiene un turno el "
                     + request.getFecha() + " a las " + request.getHora());
         }
 

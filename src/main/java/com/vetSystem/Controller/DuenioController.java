@@ -1,16 +1,18 @@
 package com.vetSystem.Controller;
 
 import com.vetSystem.DTO.DuenioDTO;
-import com.vetSystem.Exception.DuplicateResourceException;
+import com.vetSystem.DTO.MascotaDTO;
 import com.vetSystem.Exception.ResourceNotFoundException;
 import com.vetSystem.Service.DuenioService;
 import com.vetSystem.Service.MascotaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/duenios")
@@ -29,51 +31,37 @@ public class DuenioController {
     // GET /api/duenios/{id} → busca un dueño por ID
     @GetMapping("/{id}")
     public ResponseEntity<DuenioDTO> getDuenioById(@PathVariable Long id) {
-        return duenioService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());  // HTTP 404
+        Optional<DuenioDTO> duenio = duenioService.buscarPorId(id);
+        if (duenio.isEmpty()) {
+            throw new ResourceNotFoundException("Duenio", id);
+        }
+        return ResponseEntity.ok(duenio.get());
     }
 
     // POST /api/duenios → crea un nuevo dueño
     @PostMapping
-    public ResponseEntity<?> createDuenio(@RequestBody DuenioDTO dto) {
-        try {
-            DuenioDTO nuevo = duenioService.registrarEntidad(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);  // HTTP 201
-        } catch (DuplicateResourceException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());  // HTTP 409
-        }
+    public ResponseEntity<DuenioDTO> createDuenio(@Valid @RequestBody DuenioDTO dto) {
+        DuenioDTO nuevo = duenioService.registrarEntidad(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);  // HTTP 201
     }
 
     // PUT /api/duenios/{id} → actualiza un dueño existente
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDuenio(@PathVariable Long id, @RequestBody DuenioDTO dto) {
-        try {
-            dto.setId(id);  // el id de la URL manda sobre el del body
-            return ResponseEntity.ok(duenioService.modificarEntidad(dto));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<DuenioDTO> updateDuenio(@PathVariable Long id, @Valid @RequestBody DuenioDTO dto) {
+        dto.setId(id);  // el id de la URL manda sobre el del body
+        return ResponseEntity.ok(duenioService.modificarEntidad(dto));
     }
 
     // GET /api/duenios/{id}/mascotas → endpoint anidado: las mascotas de un dueño
     @GetMapping("/{id}/mascotas")
-    public ResponseEntity<?> getMascotasDelDuenio(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(mascotaService.listarPorDuenio(id));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<List<MascotaDTO>> getMascotasDelDuenio(@PathVariable Long id) {
+        return ResponseEntity.ok(mascotaService.listarPorDuenio(id));
     }
 
     // DELETE /api/duenios/{id} → elimina un dueño
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDuenio(@PathVariable Long id) {
-        try {
-            duenioService.eliminarEntidad(id);
-            return ResponseEntity.noContent().build();  // HTTP 204
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        duenioService.eliminarEntidad(id);
+        return ResponseEntity.noContent().build();  // HTTP 204
     }
 }

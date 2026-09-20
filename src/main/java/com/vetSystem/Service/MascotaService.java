@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,15 +28,22 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
     @Override
     @Transactional(readOnly = true)
     public List<MascotaDTO> listarEntidades() {
-        return mascotaRepository.findAll().stream()
-                .map(mascotaMapper::toDTO)
-                .toList();
+        List<Mascota> mascotas = mascotaRepository.findAll();
+        List<MascotaDTO> resultado = new ArrayList<>();
+        for (Mascota mascota : mascotas) {
+            resultado.add(mascotaMapper.toDTO(mascota));
+        }
+        return resultado;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<MascotaDTO> buscarPorId(Long id) {
-        return mascotaRepository.findById(id).map(mascotaMapper::toDTO);
+        Optional<Mascota> mascota = mascotaRepository.findById(id);
+        if (mascota.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mascotaMapper.toDTO(mascota.get()));
     }
 
     // Las mascotas de un dueño (endpoint anidado) — valida que el dueño exista
@@ -44,9 +52,12 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
         if (!duenioRepository.existsById(duenioId)) {
             throw new ResourceNotFoundException("Duenio", duenioId);
         }
-        return mascotaRepository.findByDuenioId(duenioId).stream()
-                .map(mascotaMapper::toDTO)
-                .toList();
+        List<Mascota> mascotas = mascotaRepository.findByDuenioId(duenioId);
+        List<MascotaDTO> resultado = new ArrayList<>();
+        for (Mascota mascota : mascotas) {
+            resultado.add(mascotaMapper.toDTO(mascota));
+        }
+        return resultado;
     }
 
     // Registrar una mascota — el dueño se resuelve desde dto.duenioId y debe existir
@@ -84,6 +95,10 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
     @Override
     @Transactional(readOnly = true)
     public Optional<MascotaDTO> buscarPorString(String nombre) {
-        return mascotaRepository.findByNombreIgnoreCase(nombre).map(mascotaMapper::toDTO);
+        Optional<Mascota> mascota = mascotaRepository.findByNombreIgnoreCase(nombre);
+        if (mascota.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mascotaMapper.toDTO(mascota.get()));
     }
 }
