@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Turnos · Clínica Veterinaria "Patitas Felices"</title>
+    <!-- Bootstrap 5 por CDN: no se instala nada con npm.
+         integrity = huella del archivo: si el CDN sirviera un archivo distinto, el
+         navegador lo descarta en lugar de ejecutarlo. -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+</head>
+<body class="bg-light">
+
+<!-- ===== Barra de navegación (igual en las cuatro páginas) ===== -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">🐾 Clínica Veterinaria "Patitas Felices"</span>
+        <div class="navbar-nav">
+            <a class="nav-link" href="index.html">Dueños</a>
+            <a class="nav-link" href="mascotas.html">Mascotas</a>
+            <a class="nav-link" href="veterinarios.html">Veterinarios</a>
+            <a class="nav-link active" href="turnos.html">Turnos</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Turnos de la clínica</h2>
+        <button class="btn btn-primary" id="botonNuevo">+ Nuevo turno</button>
+    </div>
+
+    <!-- Avisos de la página: los errores que ocurren con el modal cerrado -->
+    <div id="aviso" class="alert d-none" role="alert"></div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover bg-white">
+            <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Mascota</th>
+                <th>Veterinario</th>
+                <th>Motivo</th>
+                <th>Estado</th>
+                <th>Observaciones</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="cuerpoTabla"></tbody>
+        </table>
+    </div>
+
+    <p id="sinDatos" class="text-muted d-none">Todavía no hay turnos registrados.</p>
+
+    <!-- Los turnos no se editan ni se borran: la API sólo permite crearlos y
+         cambiarles el estado (PATCH). Un turno atendido es parte del historial. -->
+    <p class="text-muted small">
+        Un turno no se puede modificar ni eliminar: forma parte del historial clínico.
+        Lo que sí se puede es avanzar su estado (pendiente → confirmado → atendido, o cancelarlo).
+    </p>
+
+</div>
+
+<!-- ===== Modal de alta de turno ===== -->
+<div class="modal fade" id="modalFormulario" tabindex="-1">
+    <div class="modal-dialog">
+        <!-- novalidate: desactiva la validación del navegador para que se vean los
+             mensajes de error que devuelve la API -->
+        <form class="modal-content" id="formulario" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo turno</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorFormulario" class="alert alert-danger d-none"></div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="mascotaId">Mascota</label>
+                    <!-- Este combo se llena al abrir la página, pidiendo GET /api/mascotas -->
+                    <select class="form-select" id="mascotaId">
+                        <option value="">Elegí una mascota...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="veterinarioId">Veterinario</label>
+                    <select class="form-select" id="veterinarioId">
+                        <option value="">Elegí un veterinario...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="fecha">Fecha</label>
+                    <input class="form-control" id="fecha" type="date">
+                    <div class="form-text">El turno no puede ser en una fecha pasada.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="hora">Hora</label>
+                    <input class="form-control" id="hora" type="time">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="motivo">Motivo</label>
+                    <input class="form-control" id="motivo" type="text" maxlength="255">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== Modal para cambiar el estado (es el PATCH) ===== -->
+<div class="modal fade" id="modalEstado" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" id="formularioEstado" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloEstado">Cambiar estado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorEstado" class="alert alert-danger d-none"></div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="estado">Nuevo estado</label>
+                    <select class="form-select" id="estado">
+                        <option value="PENDIENTE">PENDIENTE</option>
+                        <option value="CONFIRMADO">CONFIRMADO</option>
+                        <option value="ATENDIDO">ATENDIDO</option>
+                        <option value="CANCELADO">CANCELADO</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="observaciones">Observaciones (opcional)</label>
+                    <textarea class="form-control" id="observaciones" rows="3" maxlength="255"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+<script>
+    // ==========================================================================
+    //  Turnos — consumo de la API REST con fetch
+    //  A diferencia de las otras pantallas, un turno se crea (POST) y se le cambia
+    //  el estado (PATCH), pero no se modifica ni se elimina.
+    // ==========================================================================
+    const URL_API = "http://localhost:8080/api/turnos";
+    const URL_MASCOTAS = "http://localhost:8080/api/mascotas";
+    const URL_VETERINARIOS = "http://localhost:8080/api/veterinarios";
+
+    // Turno al que se le está cambiando el estado
+    let idEnEdicion = null;
+    let modal = null;
+    let modalEstado = null;
+
+    // --------------------------------------------------------------------------
+    //  Único lugar donde se llama a la API. Devuelve el JSON ya parseado y, si la
+    //  respuesta es un error, lanza una excepción con el mensaje que manda el backend.
+    // --------------------------------------------------------------------------
+    async function pedir(url, opciones) {
+        let respuesta;
+        try {
+            respuesta = await fetch(url, opciones);
+        } catch (error) {
+            // Acá cae la falta de conexión y el bloqueo por CORS
+            throw new Error("No se pudo conectar con la API. ¿Está corriendo en el puerto 8080?");
+        }
+
+        // El 204 (No Content) no trae cuerpo: no se puede leer como JSON
+        if (respuesta.status === 204) {
+            return null;
+        }
+
+        let cuerpo = null;
+        try {
+            cuerpo = await respuesta.json();
+        } catch (error) {
+            cuerpo = null;
+        }
+
+        if (!respuesta.ok) {
+            // El backend responde siempre un ErrorResponse, y su campo se llama "mensaje"
+            if (cuerpo !== null && cuerpo.mensaje) {
+                throw new Error(cuerpo.mensaje);
+            }
+            throw new Error("El servidor respondió con el estado " + respuesta.status);
+        }
+        return cuerpo;
+    }
+
+    // --------------------------------------------------------------------------
+    //  Tabla
+    // --------------------------------------------------------------------------
+    async function cargarTabla() {
+        const cuerpoTabla = document.getElementById("cuerpoTabla");
+        cuerpoTabla.innerHTML = "";
+        try {
+            const turnos = await pedir(URL_API);
+            for (const turno of turnos) {
+                agregarFila(turno);
+            }
+            mostrarSinDatos(turnos.length === 0);
+        } catch (error) {
+            mostrarAviso(error.message);
+        }
+    }
+
+    function agregarFila(turno) {
+        const fila = document.createElement("tr");
+
+        agregarCelda(fila, turno.id);
+        agregarCelda(fila, turno.fecha);
+        // La API devuelve la hora como "10:30:00"; en la tabla alcanza "10:30"
+        agregarCelda(fila, turno.hora === null ? "" : turno.hora.substring(0, 5));
+        agregarCelda(fila, turno.mascotaNombre);
+        agregarCelda(fila, turno.veterinarioNombre);
+        agregarCelda(fila, turno.motivo);
+
+        // El estado se muestra como una etiqueta de color
+        const celdaEstado = document.createElement("td");
+        const etiqueta = document.createElement("span");
+        etiqueta.className = "badge " + colorDelEstado(turno.estado);
+        etiqueta.textContent = turno.estado;
+        celdaEstado.appendChild(etiqueta);
+        fila.appendChild(celdaEstado);
+
+        agregarCelda(fila, turno.observaciones);
+
+        const celdaAcciones = document.createElement("td");
+        celdaAcciones.className = "text-end";
+        const botonEstado = document.createElement("button");
+        botonEstado.className = "btn btn-sm btn-outline-primary";
+        botonEstado.textContent = "Cambiar estado";
+        botonEstado.addEventListener("click", function () {
+            abrirModalEstado(turno);
+        });
+        celdaAcciones.appendChild(botonEstado);
+        fila.appendChild(celdaAcciones);
+
+        document.getElementById("cuerpoTabla").appendChild(fila);
+    }
+
+    function agregarCelda(fila, valor) {
+        const celda = document.createElement("td");
+        if (valor === null || valor === undefined) {
+            celda.textContent = "";
+        } else {
+            celda.textContent = valor;
+        }
+        fila.appendChild(celda);
+    }
+
+    function colorDelEstado(estado) {
+        if (estado === "CONFIRMADO") {
+            return "text-bg-primary";
+        }
+        if (estado === "ATENDIDO") {
+            return "text-bg-success";
+        }
+        if (estado === "CANCELADO") {
+            return "text-bg-danger";
+        }
+        return "text-bg-secondary";  // PENDIENTE
+    }
+
+    // --------------------------------------------------------------------------
+    //  Combos de mascota y veterinario: el turno se crea con sus IDs
+    // --------------------------------------------------------------------------
+    async function cargarCombos() {
+        try {
+            const mascotas = await pedir(URL_MASCOTAS);
+            const comboMascotas = document.getElementById("mascotaId");
+            for (const mascota of mascotas) {
+                const opcion = document.createElement("option");
+                opcion.value = mascota.id;
+                opcion.textContent = mascota.nombre + " (" + mascota.especie + ") — dueño: " + mascota.duenioNombre;
+                comboMascotas.appendChild(opcion);
+            }
+
+            const veterinarios = await pedir(URL_VETERINARIOS);
+            const comboVeterinarios = document.getElementById("veterinarioId");
+            for (const veterinario of veterinarios) {
+                const opcion = document.createElement("option");
+                opcion.value = veterinario.id;
+                opcion.textContent = veterinario.nombre + " " + veterinario.apellido
+                        + " — " + veterinario.especialidad;
+                comboVeterinarios.appendChild(opcion);
+            }
+        } catch (error) {
+            mostrarAviso("No se pudieron cargar las mascotas y los veterinarios: " + error.message);
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    //  Alta de un turno
+    // --------------------------------------------------------------------------
+    function abrirModalAlta() {
+        document.getElementById("formulario").reset();
+        // La fecha mínima es hoy, porque el backend rechaza los turnos en el pasado.
+        // Se arma a mano y NO con toISOString(), que usa UTC: de noche, en Argentina,
+        // devolvería la fecha de mañana.
+        document.getElementById("fecha").min = fechaDeHoy();
+        ocultarError();
+        modal.show();
+    }
+
+    function fechaDeHoy() {
+        const hoy = new Date();
+        const anio = hoy.getFullYear();
+        const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+        const dia = String(hoy.getDate()).padStart(2, "0");
+        return anio + "-" + mes + "-" + dia;
+    }
+
+    function leerFormulario() {
+        const mascotaId = document.getElementById("mascotaId").value;
+        const veterinarioId = document.getElementById("veterinarioId").value;
+        const hora = document.getElementById("hora").value;
+        const motivo = document.getElementById("motivo").value.trim();
+
+        return {
+            fecha: document.getElementById("fecha").value === "" ? null : document.getElementById("fecha").value,
+            // El input type="time" devuelve "10:30" y el backend espera "10:30:00"
+            hora: hora === "" ? null : (hora.length === 5 ? hora + ":00" : hora),
+            motivo: motivo === "" ? null : motivo,
+            mascotaId: mascotaId === "" ? null : parseInt(mascotaId, 10),
+            veterinarioId: veterinarioId === "" ? null : parseInt(veterinarioId, 10)
+        };
+    }
+
+    async function guardar(evento) {
+        evento.preventDefault();
+        ocultarError();
+        try {
+            await pedir(URL_API, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(leerFormulario())
+            });
+            modal.hide();
+            mostrarAviso("Turno creado correctamente.", "success");
+            await cargarTabla();
+        } catch (error) {
+            // El error se muestra DENTRO del modal, sin cerrarlo, así no se pierde lo cargado
+            mostrarError(error.message);
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    //  Cambio de estado (PATCH): es una actualización parcial, sólo del estado
+    // --------------------------------------------------------------------------
+    function abrirModalEstado(turno) {
+        idEnEdicion = turno.id;
+        document.getElementById("tituloEstado").textContent = "Cambiar el estado del turno #" + turno.id;
+        document.getElementById("estado").value = turno.estado;
+        document.getElementById("observaciones").value = turno.observaciones === null ? "" : turno.observaciones;
+        document.getElementById("errorEstado").classList.add("d-none");
+        modalEstado.show();
+    }
+
+    async function guardarEstado(evento) {
+        evento.preventDefault();
+        document.getElementById("errorEstado").classList.add("d-none");
+
+        const estado = document.getElementById("estado").value;
+        const observaciones = document.getElementById("observaciones").value.trim();
+
+        // Este endpoint recibe los datos por la query string, no en el cuerpo.
+        // encodeURIComponent escapa los caracteres que tienen otro significado en
+        // una URL (tildes, espacios, el &...).
+        let url = URL_API + "/" + idEnEdicion + "/estado?estado=" + encodeURIComponent(estado);
+        if (observaciones !== "") {
+            // Sólo se agrega si hay texto: mandarlo vacío borraría las observaciones guardadas
+            url = url + "&observaciones=" + encodeURIComponent(observaciones);
+        }
+
+        try {
+            await pedir(url, { method: "PATCH" });
+            modalEstado.hide();
+            mostrarAviso("Estado actualizado correctamente.", "success");
+            await cargarTabla();
+        } catch (error) {
+            const cartel = document.getElementById("errorEstado");
+            cartel.textContent = error.message;
+            cartel.classList.remove("d-none");
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    //  Mensajes en pantalla
+    // --------------------------------------------------------------------------
+    function mostrarError(mensaje) {
+        const cartel = document.getElementById("errorFormulario");
+        cartel.textContent = mensaje;
+        cartel.classList.remove("d-none");
+    }
+
+    function ocultarError() {
+        document.getElementById("errorFormulario").classList.add("d-none");
+    }
+
+    function mostrarAviso(mensaje, tipo) {
+        const cartel = document.getElementById("aviso");
+        cartel.textContent = mensaje;
+        cartel.className = "alert alert-" + (tipo === "success" ? "success" : "danger");
+    }
+
+    function mostrarSinDatos(vacia) {
+        const cartel = document.getElementById("sinDatos");
+        if (vacia) {
+            cartel.classList.remove("d-none");
+        } else {
+            cartel.classList.add("d-none");
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    //  Arranque: se ejecuta cuando el HTML terminó de cargar
+    // --------------------------------------------------------------------------
+    function iniciar() {
+        modal = new bootstrap.Modal(document.getElementById("modalFormulario"));
+        modalEstado = new bootstrap.Modal(document.getElementById("modalEstado"));
+        document.getElementById("botonNuevo").addEventListener("click", abrirModalAlta);
+        document.getElementById("formulario").addEventListener("submit", guardar);
+        document.getElementById("formularioEstado").addEventListener("submit", guardarEstado);
+        cargarTabla();
+        cargarCombos();
+    }
+
+    document.addEventListener("DOMContentLoaded", iniciar);
+</script>
+</body>
+</html>
