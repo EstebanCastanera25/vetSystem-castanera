@@ -1,6 +1,7 @@
 package com.vetSystem.Controller;
 
 import com.vetSystem.DTO.MascotaDTO;
+import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.Exception.ErrorResponse;
 import com.vetSystem.Exception.ResourceNotFoundException;
 import com.vetSystem.Service.MascotaService;
@@ -17,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Optional;
 
 @Tag(name = "Mascotas", description = "Alta, consulta, modificación y baja de las mascotas de la clínica")
@@ -29,12 +29,31 @@ public class MascotaController {
     private final MascotaService mascotaService;
 
     // GET /api/mascotas → lista todas las mascotas (DTO plano con duenioId/duenioNombre)
-    @Operation(summary = "Listar todas las mascotas",
-            description = "Devuelve todas las mascotas registradas. Si no hay ninguna devuelve una lista vacía.")
-    @ApiResponse(responseCode = "200", description = "Lista de mascotas")
+    @Operation(summary = "Listar mascotas, con búsqueda opcional por texto",
+            description = "Sin el parámetro 'buscar' devuelve todas las mascotas. Con texto devuelve las "
+                    + "que lo contienen en el nombre, la especie o la raza de la mascota, o en el nombre o "
+                    + "apellido del dueño, sin distinguir mayúsculas. Si ninguna coincide devuelve una lista "
+                    + "vacía, no un 404.")
+    @ApiResponse(responseCode = "200",
+            description = "Una página de mascotas: todas, o sólo las que coinciden con el texto")
     @GetMapping
-    public ResponseEntity<List<MascotaDTO>> getAllMascotas() {
-        return ResponseEntity.ok(mascotaService.listarEntidades());
+    public ResponseEntity<PaginaDTO<MascotaDTO>> getAllMascotas(
+            @Parameter(description = "Texto a buscar en nombre, especie o raza de la mascota, o nombre/apellido "
+                    + "del dueño. Si se omite o viene vacío se devuelven todas.", example = "perro")
+            @RequestParam(required = false) String buscar,
+            @Parameter(description = "Número de página, empezando en 0. Si se omite, 0.", example = "0")
+            @RequestParam(required = false) Integer pagina,
+            @Parameter(description = "Cuántas mascotas trae cada página. Si se omite, 10. Máximo 200.",
+                    example = "10")
+            @RequestParam(required = false) Integer tamanio,
+            @Parameter(description = "Campo por el que ordenar: id, nombre, especie, raza, "
+                    + "fechaNacimiento o duenioNombre. Cualquier otro valor usa el orden por "
+                    + "defecto (nombre).", example = "nombre")
+            @RequestParam(required = false) String orden,
+            @Parameter(description = "asc o desc. Por defecto asc.", example = "asc")
+            @RequestParam(required = false) String direccion) {
+        return ResponseEntity.ok(
+                mascotaService.buscarPorTexto(buscar, pagina, tamanio, orden, direccion));
     }
 
     // GET /api/mascotas/{id} → busca una mascota por ID

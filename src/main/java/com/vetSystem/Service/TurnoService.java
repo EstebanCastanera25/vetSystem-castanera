@@ -1,5 +1,6 @@
 package com.vetSystem.Service;
 
+import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.DTO.TurnoRequestDTO;
 import com.vetSystem.DTO.TurnoResponseDTO;
 import com.vetSystem.Entity.EstadoTurno;
@@ -12,13 +13,18 @@ import com.vetSystem.Mapper.TurnoMapper;
 import com.vetSystem.Repository.MascotaRepository;
 import com.vetSystem.Repository.TurnoRepository;
 import com.vetSystem.Repository.VeterinarioRepository;
+import com.vetSystem.util.PaginaUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 // No implementa InterfaceService: el DTO de entrada (TurnoRequestDTO) y el de
@@ -32,14 +38,53 @@ public class TurnoService {
     private final VeterinarioRepository veterinarioRepository;
     private final TurnoMapper turnoMapper;
 
+    // El orden con el que se listan los turnos si el cliente no pide ninguno.
+    // Termina en el id a proposito: dos turnos con la misma fecha y hora tienen que
+    // quedar siempre en el mismo orden relativo entre una pagina y otra.
+    private static final Sort ORDEN_POR_DEFECTO =
+            Sort.by(Sort.Order.desc("fecha"), Sort.Order.desc("hora"), Sort.Order.desc("id"));
+
+    // La clave es el nombre de la columna del frontend y el valor es el campo real.
+    // mascotaNombre y veterinarioNombre viven dentro de relaciones, por eso se traducen.
+    // La lista tambien protege: un campo inexistente haria fallar a Hibernate al armar
+    // la consulta y la API devolveria un 500 disparable desde la URL.
+    // Map.of admite hasta 10 pares; acá hay 8. Si hiciera falta un noveno campo, hay que
+    // pasar a Map.ofEntries.
+    private static final Map<String, String> CAMPOS_ORDENABLES = Map.of(
+            "id", "id",
+            "fecha", "fecha",
+            "hora", "hora",
+            // El estado es un enum guardado como texto: ordena alfabéticamente
+            // (ATENDIDO, CANCELADO, CONFIRMADO, PENDIENTE), no por el avance del turno
+            "estado", "estado",
+            "motivo", "motivo",
+            "observaciones", "observaciones",
+            "mascotaNombre", "mascota.nombre",
+            "veterinarioNombre", "veterinario.nombre");
+
     @Transactional(readOnly = true)
-    public List<TurnoResponseDTO> listarTurnos() {
-        List<Turno> turnos = turnoRepository.findAll();
-        List<TurnoResponseDTO> resultado = new ArrayList<>();
-        for (Turno turno : turnos) {
-            resultado.add(turnoMapper.toDTO(turno));
+    // Con estado en null devuelve todos; con un estado, sólo los de ese estado.
+    // La regla "sin filtro = todos" vive acá, igual que en el buscador de las otras
+    // pantallas: el controller no decide nada.
+    public PaginaDTO<TurnoResponseDTO> listarTurnos(EstadoTurno estado, Integer pagina,
+                                                    Integer tamanio, String orden, String direccion) {
+        Sort ordenPedido = PaginaUtil.armarOrden(orden, direccion, CAMPOS_ORDENABLES, ORDEN_POR_DEFECTO);
+        Pageable pageable = PaginaUtil.armarPageable(pagina, tamanio, ordenPedido);
+
+        // Se pagina en la BASE (LIMIT/OFFSET), no en memoria: traer todo para despues
+        // quedarse con diez seria paginar la pantalla, no la consulta.
+        Page<Turno> paginaDeTurnos;
+        if (estado == null) {
+            paginaDeTurnos = turnoRepository.findAll(pageable);
+        } else {
+            paginaDeTurnos = turnoRepository.findByEstado(estado, pageable);
         }
-        return resultado;
+
+        List<TurnoResponseDTO> contenido = new ArrayList<>();
+        for (Turno turno : paginaDeTurnos.getContent()) {
+            contenido.add(turnoMapper.toDTO(turno));
+        }
+        return PaginaUtil.armar(contenido, paginaDeTurnos);
     }
 
     @Transactional(readOnly = true)

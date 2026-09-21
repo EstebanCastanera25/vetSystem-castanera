@@ -1,18 +1,25 @@
 package com.vetSystem.Service;
 
 import com.vetSystem.DTO.MascotaDTO;
+import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.Entity.Duenio;
 import com.vetSystem.Entity.Mascota;
 import com.vetSystem.Exception.ResourceNotFoundException;
 import com.vetSystem.Mapper.MascotaMapper;
 import com.vetSystem.Repository.DuenioRepository;
 import com.vetSystem.Repository.MascotaRepository;
+import com.vetSystem.util.PaginaUtil;
+import com.vetSystem.util.TextoUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -64,6 +71,7 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
     @Override
     @Transactional
     public MascotaDTO registrarEntidad(MascotaDTO dto) {
+        normalizar(dto);
         Duenio duenio = duenioRepository.findById(dto.getDuenioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Duenio", dto.getDuenioId()));
         Mascota mascota = mascotaMapper.toEntity(dto);  // el mapper ignora duenio...
@@ -75,6 +83,7 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
     @Override
     @Transactional
     public MascotaDTO modificarEntidad(MascotaDTO dto) {
+        normalizar(dto);
         Mascota mascota = mascotaRepository.findById(dto.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Mascota", dto.getId()));
         mascota.setNombre(dto.getNombre());
@@ -100,5 +109,61 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
             return Optional.empty();
         }
         return Optional.of(mascotaMapper.toDTO(mascota.get()));
+    }
+
+    // El orden con el que se listan las mascotas si el cliente no pide ninguno.
+    // Termina en el id a propósito: dos mascotas con el mismo nombre tienen que quedar
+    // siempre en el mismo orden relativo entre una página y otra.
+    private static final Sort ORDEN_POR_DEFECTO =
+            Sort.by(Sort.Order.asc("nombre"), Sort.Order.asc("id"));
+
+    // Por qué campos se puede ordenar. La columna duenioNombre de la tabla del frontend
+    // corresponde a duenio.nombre en la entidad; esta lista traduce entre ambos nombres.
+    // Lo que no esté en esta lista cae al orden por defecto.
+    private static final Map<String, String> CAMPOS_ORDENABLES = Map.of(
+            "id", "id",
+            "nombre", "nombre",
+            "especie", "especie",
+            "raza", "raza",
+            "fechaNacimiento", "fechaNacimiento",
+            "duenioNombre", "duenio.nombre");
+
+    // Buscador paginado del frontend: texto parcial contra datos de la mascota y de su dueño.
+    // Queda FUERA del contrato InterfaceService (no lleva @Override) porque su semántica
+    // es distinta a la de buscarPorString: aquél es match exacto y devuelve 0 ó 1, éste es
+    // parcial, ignora mayúsculas y devuelve una página de N. Mismo patrón que listarPorDuenio.
+    //
+    // La regla del texto vacío vive ACÁ, no en el controller: un solo lugar decide qué
+    // significa "sin filtro" y vale igual para el frontend, para Swagger y para Postman.
+    // isBlank() (no isEmpty()) para que "   " también cuente como vacío, y trim() para que
+    // "  rocky  " no se convierta en un LIKE '%  rocky  %' que no encuentra nada.
+    @Transactional(readOnly = true)
+    public PaginaDTO<MascotaDTO> buscarPorTexto(String texto, Integer pagina, Integer tamanio,
+                                                String orden, String direccion) {
+        Sort ordenPedido = PaginaUtil.armarOrden(orden, direccion, CAMPOS_ORDENABLES, ORDEN_POR_DEFECTO);
+        Pageable pageable = PaginaUtil.armarPageable(pagina, tamanio, ordenPedido);
+
+        // Se pagina en la BASE (LIMIT/OFFSET), no en memoria: traer todo para después
+        // quedarse con diez sería paginar la pantalla, no la consulta.
+        Page<Mascota> paginaDeMascotas;
+        if (texto == null || texto.isBlank()) {
+            paginaDeMascotas = mascotaRepository.findAll(pageable);
+        } else {
+            paginaDeMascotas = mascotaRepository.buscarPorTexto(texto.trim(), pageable);
+        }
+
+        List<MascotaDTO> contenido = new ArrayList<>();
+        for (Mascota mascota : paginaDeMascotas.getContent()) {
+            contenido.add(mascotaMapper.toDTO(mascota));
+        }
+        return PaginaUtil.armar(contenido, paginaDeMascotas);
+    }
+
+    // Un solo lugar decide como se guarda el texto de esta entidad. Se llama desde el alta
+    // y desde la edicion, asi no hay forma de que una de las dos se olvide.
+    private void normalizar(MascotaDTO dto) {
+        dto.setNombre(TextoUtil.aTitulo(dto.getNombre()));
+        dto.setEspecie(TextoUtil.aTitulo(dto.getEspecie()));
+        dto.setRaza(TextoUtil.aTitulo(dto.getRaza()));
     }
 }

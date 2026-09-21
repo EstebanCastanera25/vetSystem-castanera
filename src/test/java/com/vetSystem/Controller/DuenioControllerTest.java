@@ -1,6 +1,7 @@
 package com.vetSystem.Controller;
 
 import com.vetSystem.DTO.DuenioDTO;
+import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.Exception.DuplicateResourceException;
 import com.vetSystem.Service.DuenioService;
 import com.vetSystem.Service.MascotaService;
@@ -23,6 +24,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -69,6 +71,12 @@ class DuenioControllerTest {
     @MockitoBean
     private MascotaService mascotaService;
 
+    // Arma la respuesta que devuelve el service ya paginada. El service esta mockeado,
+    // asi que lo unico que se prueba aca es el contrato HTTP: que la pagina salga en el JSON.
+    private PaginaDTO<DuenioDTO> pagina(java.util.List<DuenioDTO> contenido) {
+        return new PaginaDTO<>(contenido, 0, 10, contenido.size(), contenido.isEmpty() ? 0 : 1);
+    }
+
     private DuenioDTO duenioValido(Long id) {
         return new DuenioDTO(id, "Carlos", "Sanchez", "31541741", 1155667788, "carlos@mail.com");
     }
@@ -76,13 +84,85 @@ class DuenioControllerTest {
     @Test
     @DisplayName("GET /api/duenios sin datos devuelve 200 y una lista vacia")
     void getAllDuenios_cuandoNoHayDuenios_retorna200YListaVacia() throws Exception {
-        // ARRANGE
-        when(duenioService.listarEntidades()).thenReturn(List.of());
+        // ARRANGE: sin el parametro buscar, Spring le pasa null al controller
+        when(duenioService.buscarPorTexto(null, null, null, null, null))
+                .thenReturn(pagina(List.of()));
 
         // ACT + ASSERT
         mockMvc.perform(get("/api/duenios"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.contenido", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /api/duenios?buscar=ana devuelve 200 y solo los que coinciden")
+    void getAllDuenios_cuandoSeBuscaUnTexto_retorna200YSoloLosQueCoinciden() throws Exception {
+        // ARRANGE
+        when(duenioService.buscarPorTexto(eq("ana"), any(), any(), any(), any()))
+                .thenReturn(pagina(List.of(duenioValido(1L))));
+
+        // ACT + ASSERT
+        mockMvc.perform(get("/api/duenios").param("buscar", "ana"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido", hasSize(1)))
+                .andExpect(jsonPath("$.contenido[0].nombre").value("Carlos"));
+    }
+
+    @Test
+    @DisplayName("Una busqueda sin resultados devuelve 200 y lista vacia, NO 404")
+    void getAllDuenios_cuandoLaBusquedaNoTieneResultados_retorna200YListaVacia() throws Exception {
+        // ARRANGE
+        when(duenioService.buscarPorTexto(eq("zzzz"), any(), any(), any(), any()))
+                .thenReturn(pagina(List.of()));
+
+        // ACT + ASSERT: no encontrar nada no es un error. La coleccion existe y esta vacia;
+        // un 404 obligaria al frontend a tratar el caso normal como excepcion.
+        mockMvc.perform(get("/api/duenios").param("buscar", "zzzz"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /api/duenios?buscar= (vacio) devuelve 200 y todos los duenios")
+    void getAllDuenios_cuandoElTextoEsVacio_retorna200YTodosLosDuenios() throws Exception {
+        // ARRANGE: el controller pasa el texto TAL CUAL; decidir que un texto vacio
+        // significa "sin filtro" es responsabilidad del service, no de la capa web.
+        when(duenioService.buscarPorTexto(eq(""), any(), any(), any(), any()))
+                .thenReturn(pagina(List.of(duenioValido(1L), duenioValido(2L))));
+
+        // ACT + ASSERT
+        mockMvc.perform(get("/api/duenios").param("buscar", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido", hasSize(2)));
+    }
+
+    @Test
+    @DisplayName("El listado devuelve la forma de una pagina, no un array pelado")
+    void getAllDuenios_sinParametros_retorna200ConLaFormaDeLaPagina() throws Exception {
+        // ARRANGE
+        when(duenioService.buscarPorTexto(null, null, null, null, null))
+                .thenReturn(new PaginaDTO<>(List.of(duenioValido(1L)), 0, 10, 47L, 5));
+
+        // ACT + ASSERT: este test ES el contrato de PaginaDTO. Si alguien le cambia un
+        // nombre de campo, el frontend deja de encontrar los datos y esto se pone en rojo.
+        mockMvc.perform(get("/api/duenios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido", hasSize(1)))
+                .andExpect(jsonPath("$.pagina").value(0))
+                .andExpect(jsonPath("$.tamanio").value(10))
+                .andExpect(jsonPath("$.totalElementos").value(47))
+                .andExpect(jsonPath("$.totalPaginas").value(5));
+    }
+
+    @Test
+    @DisplayName("Una pagina que no es un numero devuelve 400, no 500")
+    void getAllDuenios_cuandoLaPaginaNoEsUnNumero_retorna400() throws Exception {
+        // ACT + ASSERT: corta en la conversion del parametro, antes del controller
+        mockMvc.perform(get("/api/duenios").param("pagina", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("pagina")));
+
+        verifyNoInteractions(duenioService);
     }
 
     @Test
@@ -229,7 +309,8 @@ class DuenioControllerTest {
     void getAllDuenios_cuandoElOrigenEstaPermitido_devuelveHeaderDeCors() throws Exception {
         // ARRANGE: el navegador manda el header Origin; sin el permiso de CorsConfig
         // bloquearia la respuesta y la tabla del frontend quedaria vacia.
-        when(duenioService.listarEntidades()).thenReturn(List.of(duenioValido(1L)));
+        when(duenioService.buscarPorTexto(null, null, null, null, null))
+                .thenReturn(pagina(List.of(duenioValido(1L))));
 
         // ACT + ASSERT
         mockMvc.perform(get("/api/duenios").header("Origin", "http://localhost:5500"))

@@ -1,6 +1,7 @@
 package com.vetSystem.Controller;
 
 import com.vetSystem.DTO.VeterinarioDTO;
+import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.Exception.ErrorResponse;
 import com.vetSystem.Exception.ResourceNotFoundException;
 import com.vetSystem.Service.VeterinarioService;
@@ -28,13 +29,42 @@ public class VeterinarioController {
 
     private final VeterinarioService veterinarioService;
 
-    // GET /api/veterinarios → lista todos los veterinarios
-    @Operation(summary = "Listar todos los veterinarios",
-            description = "Devuelve todos los veterinarios registrados. Si no hay ninguno devuelve una lista vacía.")
-    @ApiResponse(responseCode = "200", description = "Lista de veterinarios")
+    // GET /api/veterinarios            → lista todos los veterinarios
+    // GET /api/veterinarios?buscar=ana → sólo los que coinciden (el frontend lo llama con debounce)
+    //
+    // El buscador es un PARÁMETRO OPCIONAL del listado, no un endpoint /buscar aparte: es el
+    // mismo recurso y la misma representación, lo único que cambia es cuántos elementos trae.
+    //
+    // El controller no decide nada: siempre delega. La regla "sin texto = todos" es del service.
+    @Operation(summary = "Listar veterinarios, con búsqueda opcional por texto",
+            description = "Sin el parámetro 'buscar' devuelve todos los veterinarios. Con texto devuelve los "
+                    + "que lo contienen en el nombre, el apellido, la matrícula o la especialidad, sin distinguir "
+                    + "mayúsculas. Si ninguno coincide devuelve una lista vacía, no un 404.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200",
+                    description = "Una página de veterinarios: todos, o sólo los que coinciden con el texto"),
+            @ApiResponse(responseCode = "400", description = "Algún parámetro no es un número",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping
-    public ResponseEntity<List<VeterinarioDTO>> getAllVeterinarios() {
-        return ResponseEntity.ok(veterinarioService.listarEntidades());
+    public ResponseEntity<PaginaDTO<VeterinarioDTO>> getAllVeterinarios(
+            @Parameter(description = "Texto a buscar en nombre, apellido, matrícula o especialidad. "
+                    + "Si se omite o viene vacío se devuelven todos.", example = "ana")
+            @RequestParam(required = false) String buscar,
+            @Parameter(description = "Número de página, empezando en 0. Si se omite, 0.",
+                    example = "0")
+            @RequestParam(required = false) Integer pagina,
+            @Parameter(description = "Cuántos veterinarios trae cada página. Si se omite, 10. Máximo 200.",
+                    example = "10")
+            @RequestParam(required = false) Integer tamanio,
+            @Parameter(description = "Campo por el que ordenar: id, nombre, apellido, matricula, "
+                    + "especialidad o email. Cualquier otro valor usa el orden por defecto "
+                    + "(apellido y nombre).", example = "apellido")
+            @RequestParam(required = false) String orden,
+            @Parameter(description = "asc o desc. Por defecto asc.", example = "asc")
+            @RequestParam(required = false) String direccion) {
+        return ResponseEntity.ok(
+                veterinarioService.buscarPorTexto(buscar, pagina, tamanio, orden, direccion));
     }
 
     // GET /api/veterinarios/{id} → busca un veterinario por ID

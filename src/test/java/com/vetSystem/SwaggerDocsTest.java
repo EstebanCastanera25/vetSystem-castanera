@@ -44,6 +44,9 @@ class SwaggerDocsTest {
                 .andExpect(jsonPath("$.paths['/api/veterinarios']").exists())
                 .andExpect(jsonPath("$.paths['/api/turnos']").exists())
                 .andExpect(jsonPath("$.paths['/api/duenios'].get.tags[0]").value("Dueños"))
+                // el buscador figura como parametro opcional del listado, no como un path aparte
+                .andExpect(jsonPath("$.paths['/api/duenios'].get.parameters[0].name").value("buscar"))
+                .andExpect(jsonPath("$.paths['/api/duenios'].get.parameters[0].required").value(false))
                 // los @Schema de los DTOs: descripcion y ejemplo de cada campo
                 .andExpect(jsonPath("$.components.schemas.DuenioDTO.properties.cedula.example")
                         .value("28543210"))

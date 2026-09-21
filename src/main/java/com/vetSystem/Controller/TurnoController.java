@@ -1,5 +1,6 @@
 package com.vetSystem.Controller;
 
+import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.DTO.TurnoRequestDTO;
 import com.vetSystem.DTO.TurnoResponseDTO;
 import com.vetSystem.Entity.EstadoTurno;
@@ -32,13 +33,41 @@ public class TurnoController {
 
     private final TurnoService turnoService;
 
-    // GET /api/turnos → lista todos los turnos (como TurnoResponseDTO)
-    @Operation(summary = "Listar todos los turnos",
-            description = "Devuelve todos los turnos registrados. Si no hay ninguno devuelve una lista vacía.")
-    @ApiResponse(responseCode = "200", description = "Lista de turnos")
+    // GET /api/turnos                   → lista todos los turnos (como TurnoResponseDTO)
+    // GET /api/turnos?estado=PENDIENTE  → sólo los que están en ese estado
+    //
+    // Mismo criterio que el buscador de las otras pantallas: es un filtro OPCIONAL sobre la
+    // colección, así que va como query param del listado y no como un endpoint aparte.
+    // Spring convierte solo el texto de la URL al enum EstadoTurno.
+    @Operation(summary = "Listar turnos, con filtro opcional por estado",
+            description = "Sin el parámetro 'estado' devuelve todos los turnos. Con un estado devuelve "
+                    + "sólo los de ese estado. Si no hay ninguno devuelve "
+                    + "una lista vacía, no un 404.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista de turnos: todos, o sólo los del estado pedido"),
+            @ApiResponse(responseCode = "400", description = "El estado indicado no es uno de los válidos",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping
-    public ResponseEntity<List<TurnoResponseDTO>> listarTurnos() {
-        return ResponseEntity.ok(turnoService.listarTurnos());
+    public ResponseEntity<PaginaDTO<TurnoResponseDTO>> listarTurnos(
+            @Parameter(description = "Estado por el que filtrar. Si se omite se devuelven todos.",
+                    example = "PENDIENTE")
+            @RequestParam(required = false) EstadoTurno estado,
+            @Parameter(description = "Numero de pagina, empezando en 0. Si se omite, 0.",
+                    example = "0")
+            @RequestParam(required = false) Integer pagina,
+            @Parameter(description = "Cuantos turnos trae cada pagina. Si se omite, 10. Maximo 200.",
+                    example = "10")
+            @RequestParam(required = false) Integer tamanio,
+            @Parameter(description = "Campo por el que ordenar: id, fecha, hora, estado, motivo, "
+                    + "observaciones, mascotaNombre o veterinarioNombre. Cualquier otro valor usa "
+                    + "el orden por defecto (fecha y hora, del más reciente al más viejo).",
+                    example = "fecha")
+            @RequestParam(required = false) String orden,
+            @Parameter(description = "asc o desc. Por defecto asc.", example = "desc")
+            @RequestParam(required = false) String direccion) {
+        return ResponseEntity.ok(
+                turnoService.listarTurnos(estado, pagina, tamanio, orden, direccion));
     }
 
     // GET /api/turnos/{id} → busca un turno por ID

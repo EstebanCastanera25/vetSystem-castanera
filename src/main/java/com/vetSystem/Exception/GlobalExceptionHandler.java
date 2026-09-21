@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -41,6 +42,17 @@ public class GlobalExceptionHandler {
                                                             HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST,
                 "El cuerpo del pedido tiene un formato inválido", request);
+    }
+
+    // Un parámetro de la URL no se pudo convertir al tipo que espera el controller → HTTP 400.
+    // Pasa, por ejemplo, con ?estado=BASURA (no es un valor del enum EstadoTurno) o con
+    // /api/duenios/abc (no es un Long). Sin este handler caían en el Exception genérico y la
+    // API devolvía un 500, como si el error fuera del servidor y no del pedido.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleParametroInvalido(MethodArgumentTypeMismatchException ex,
+                                                                 HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST,
+                "El valor del parámetro '" + ex.getName() + "' no es válido", request);
     }
 
     // Un ID no existe en la base → HTTP 404
