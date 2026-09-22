@@ -142,11 +142,17 @@ public class TurnoService {
         Veterinario veterinario = veterinarioRepository.findById(request.getVeterinarioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Veterinario", request.getVeterinarioId()));
 
-        // 3. Regla de negocio: un veterinario no puede tener dos turnos a la misma hora
-        if (turnoRepository.existsByVeterinarioIdAndFechaAndHora(
-                request.getVeterinarioId(), request.getFecha(), request.getHora())) {
-            throw new TurnoSuperpuestoException("El veterinario ya tiene un turno el "
-                    + request.getFecha() + " a las " + request.getHora());
+        // 3. Regla de negocio: un veterinario no puede tener dos turnos a la misma hora.
+        //    Se busca el turno en conflicto (no solo si existe) para poder nombrarlo por ID
+        //    en el error: asi el cliente sabe cual reprogramar.
+        Optional<Turno> enConflicto = turnoRepository.findFirstByVeterinarioIdAndFechaAndHora(
+                request.getVeterinarioId(), request.getFecha(), request.getHora());
+        if (enConflicto.isPresent()) {
+            Turno ocupado = enConflicto.get();
+            throw new TurnoSuperpuestoException(
+                    "El veterinario " + veterinario.getNombre() + " " + veterinario.getApellido()
+                            + " ya tiene el turno id " + ocupado.getId() + " el "
+                            + ocupado.getFecha() + " a las " + ocupado.getHora());
         }
 
         // 4. Armar la entidad desde el request — el estado inicial siempre es PENDIENTE

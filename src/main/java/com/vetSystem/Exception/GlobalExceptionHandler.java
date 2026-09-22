@@ -2,8 +2,6 @@ package com.vetSystem.Exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import main.java.com.vetSystem.Exception.CupoExcedidoException;
-import main.java.com.vetSystem.Exception.StockInsuficienteException;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;

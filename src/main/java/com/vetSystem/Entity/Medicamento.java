@@ -20,9 +20,13 @@ public class Medicamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    
     @Column(nullable = false)
     private String nombre;
-
+    
+    @Column(name = "principio_activo", nullable = false)
+    private String principioActivo;
+    
     @Column(nullable = false)
     private Integer stock;
 
