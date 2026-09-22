@@ -1,7 +1,6 @@
 package com.vetSystem.Entity;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-import main.java.com.vetSystem.Entity.Medicamento;
 
 import java.util.ArrayList;
 import java.util.List;

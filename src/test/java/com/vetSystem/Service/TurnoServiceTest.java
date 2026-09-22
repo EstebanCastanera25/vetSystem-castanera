@@ -12,6 +12,10 @@ import com.vetSystem.Mapper.TurnoMapper;
 import com.vetSystem.Repository.MascotaRepository;
 import com.vetSystem.Repository.TurnoRepository;
 import com.vetSystem.Repository.VeterinarioRepository;
+
+import main.java.com.vetSystem.Mapper.MedicamentoMapper;
+import main.java.com.vetSystem.Repository.MedicamentoRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+
+import com.vetSystem.Mapper.MedicamentoMapper;
+import com.vetSystem.Repository.MedicamentoRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,6 +60,13 @@ class TurnoServiceTest {
 
     @Mock
     private TurnoMapper turnoMapper;
+
+        @Mock
+    private MedicamentoRepository medicamentoRepository;
+
+    @Mock
+    private MedicamentoMapper medicamentoMapper;
+
 
     @InjectMocks
     private TurnoService turnoService;

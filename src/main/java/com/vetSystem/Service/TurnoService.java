@@ -1,5 +1,11 @@
 package com.vetSystem.Service;
 
+import com.vetSystem.DTO.MedicamentoResponseDTO;
+import com.vetSystem.Entity.Medicamento;
+import com.vetSystem.Exception.StockInsuficienteException;
+import com.vetSystem.Mapper.MedicamentoMapper;
+import com.vetSystem.Repository.MedicamentoRepository;
+
 import com.vetSystem.DTO.PaginaDTO;
 import com.vetSystem.DTO.TurnoRequestDTO;
 import com.vetSystem.DTO.TurnoResponseDTO;
@@ -37,6 +43,8 @@ public class TurnoService {
     private final MascotaRepository mascotaRepository;
     private final VeterinarioRepository veterinarioRepository;
     private final TurnoMapper turnoMapper;
+     private final MedicamentoRepository medicamentoRepository;
+    private final MedicamentoMapper medicamentoMapper;
 
     // El orden con el que se listan los turnos si el cliente no pide ninguno.
     // Termina en el id a proposito: dos turnos con la misma fecha y hora tienen que
@@ -163,5 +171,53 @@ public class TurnoService {
             turno.setObservaciones(observaciones);
         }
         return turnoMapper.toDTO(turnoRepository.save(turno));
+    }
+
+    // GET /api/turnos/{id}/medicamentos
+     @Transactional(readOnly = true)
+    public List<MedicamentoResponseDTO> listarMedicamentosDeTurno(Long turnoId) {
+        Turno turno = turnoRepository.findById(turnoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Turno", turnoId));
+        return aDTOs(turno.getMedicamentos());
+    }
+
+    // POST /api/turnos/{turnoId}/medicamentos/{medicamentoId}
+    @Transactional
+    public List<MedicamentoResponseDTO> recetarMedicamento(Long turnoId, Long medicamentoId) {
+        // 1. El turno debe existir
+        Turno turno = turnoRepository.findById(turnoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Turno", turnoId));
+
+        // 2. El medicamento debe existir
+        Medicamento medicamento = medicamentoRepository.findById(medicamentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicamento", medicamentoId));
+
+        // 3. Regla de negocio: no se receta lo que no hay en la farmacia.
+        //    El <= 0 y no == 0 a proposito: si por un error previo el stock quedo negativo,
+        //    tampoco se puede recetar. Un == 0 lo dejaria pasar.
+        if (medicamento.getStock() == null || medicamento.getStock() <= 0) {
+            throw new StockInsuficienteException(
+                    "El medicamento '" + medicamento.getNombre() + "' (id " + medicamento.getId()
+                            + ") no tiene stock disponible: quedan " + medicamento.getStock()
+                            + " unidades");
+        }
+
+        // 4. Se entrega UNA unidad
+        medicamento.setStock(medicamento.getStock() - 1);
+        medicamentoRepository.save(medicamento);
+
+        // 5. Se agrega a la receta del turno
+        turno.getMedicamentos().add(medicamento);
+        turnoRepository.save(turno);
+
+        return aDTOs(turno.getMedicamentos());
+    }
+    
+    private List<MedicamentoResponseDTO> aDTOs(List<Medicamento> medicamentos) {
+        List<MedicamentoResponseDTO> resultado = new ArrayList<>();
+        for (Medicamento medicamento : medicamentos) {
+            resultado.add(medicamentoMapper.toDTO(medicamento));
+        }
+        return resultado;
     }
 }
