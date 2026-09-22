@@ -8,12 +8,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.vetSystem.Exception.CupoExcedidoException;
+
 import java.util.List;
 import java.util.Optional;
 
 @Repository
+
 public interface MascotaRepository extends JpaRepository<Mascota, Long> {
 
+   long countByDuenioId(Long duenioId);
     // Todas las mascotas de un dueño específico
     // SELECT * FROM mascotas WHERE duenio_id = ?
     List<Mascota> findByDuenioId(Long duenioId);

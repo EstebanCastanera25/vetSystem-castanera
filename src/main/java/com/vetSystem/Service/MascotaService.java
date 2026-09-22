@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.vetSystem.Exception.CupoExcedidoException;
+
+
 @Service
 @RequiredArgsConstructor
 public class MascotaService implements InterfaceService<MascotaDTO> {
@@ -29,6 +32,8 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
     private final MascotaRepository mascotaRepository;
     private final DuenioRepository duenioRepository;
     private final MascotaMapper mascotaMapper;
+
+    private static final int CUPO_MAXIMO_DE_MASCOTAS = 5;
 
     // @Transactional(readOnly) mantiene la sesión JPA abierta para que el mapper
     // pueda leer mascota.getDuenio() (relación LAZY) al armar duenioId/duenioNombre
@@ -74,8 +79,17 @@ public class MascotaService implements InterfaceService<MascotaDTO> {
         normalizar(dto);
         Duenio duenio = duenioRepository.findById(dto.getDuenioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Duenio", dto.getDuenioId()));
-        Mascota mascota = mascotaMapper.toEntity(dto);  // el mapper ignora duenio...
-        mascota.setDuenio(duenio);                      // ...y lo seteamos acá ya validado
+
+        // Regla de negocio: el duenio no puede pasar el cupo de mascotas activas.
+        long mascotasActivas = mascotaRepository.countByDuenioId(duenio.getId());
+        if (mascotasActivas >= CUPO_MAXIMO_DE_MASCOTAS) {
+            throw new CupoExcedidoException("El duenio id " + duenio.getId() + " ya tiene "
+                    + mascotasActivas + " mascotas activas y el cupo maximo es de "
+                    + CUPO_MAXIMO_DE_MASCOTAS);
+        }
+
+        Mascota mascota = mascotaMapper.toEntity(dto);  
+        mascota.setDuenio(duenio);                      
         return mascotaMapper.toDTO(mascotaRepository.save(mascota));
     }
 
