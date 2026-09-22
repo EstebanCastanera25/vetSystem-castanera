@@ -1,4 +1,10 @@
 package com.vetSystem.Entity;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import main.java.com.vetSystem.Entity.Medicamento;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -34,4 +40,14 @@ public class Turno {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "veterinario_id", nullable = false)
     private Veterinario veterinario;
+
+
+    @JoinTable(
+            name = "turno_medicamento",
+            joinColumns = @JoinColumn(name = "turno_id"),
+            inverseJoinColumns = @JoinColumn(name = "medicamento_id"))
+    @ManyToMany(fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Medicamento> medicamentos = new ArrayList<>();
 }
