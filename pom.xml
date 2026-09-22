@@ -18,6 +18,15 @@
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 	</properties>
 	<dependencies>
+		<!-- Swagger / OpenAPI 3: genera la documentación de la API leyendo las
+		     anotaciones de los Controllers y la sirve en /swagger-ui.html.
+		     Ojo con la versión: la línea 3.x es la compatible con Spring Boot 4
+		     (la 2.x es para Boot 3). -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.1.1</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>

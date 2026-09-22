@@ -1,0 +1,346 @@
+/* ===========================================================================
+   estilos.css — el tema de la clínica.
+
+   Bootstrap trae la ESTRUCTURA (grilla, tabla, modal, offcanvas) y acá se le
+   cambia la APARIENCIA. Esta hoja se carga DESPUÉS de la de Bootstrap en el
+   <head>, así que ante dos reglas con la misma especificidad gana ésta.
+
+   Los colores están declarados una sola vez como variables en :root. Para
+   cambiar el tema entero alcanza con tocar esos siete valores de abajo.
+   =========================================================================== */
+
+:root {
+    --vet-primario: #0f766e;        /* verde azulado: el color de la marca */
+    --vet-primario-oscuro: #115e59; /* el mismo, para hover y bordes */
+    --vet-primario-suave: #f0fdfa;  /* fondo de la fila cuando pasás el mouse */
+    --vet-texto: #0f172a;
+    --vet-texto-suave: #64748b;     /* etiquetas, ayudas, texto secundario */
+    --vet-borde: #e2e8f0;
+    --vet-fondo: #f1f5f9;           /* el gris del fondo de la página */
+}
+
+/* ---- Base ---- */
+
+body {
+    /* Inter viene de Google Fonts; si no cargara, el navegador usa la
+       siguiente de la lista (en Windows, Segoe UI) y la página se ve igual
+       de prolija, sólo que con otra tipografía. */
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--vet-texto);
+}
+
+/* .bg-light es la clase que ya tenía el <body>: se le cambia el gris */
+body.bg-light {
+    background-color: var(--vet-fondo) !important;
+}
+
+h2 {
+    font-weight: 600;
+    letter-spacing: -.02em;
+}
+
+/* ---- Barra de navegación ---- */
+
+.navbar.bg-primary {
+    background-color: var(--vet-primario) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .12);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, .78);
+    font-weight: 500;
+    border-radius: 6px;
+    padding: .35rem .75rem;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, .12);
+}
+
+/* La página en la que estás parado queda marcada con una pastilla */
+.navbar-dark .navbar-nav .nav-link.active {
+    color: var(--vet-primario);
+    background-color: #fff;
+}
+
+/* ---- Botones ---- */
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--vet-primario);
+    --bs-btn-border-color: var(--vet-primario);
+    --bs-btn-hover-bg: var(--vet-primario-oscuro);
+    --bs-btn-hover-border-color: var(--vet-primario-oscuro);
+    --bs-btn-active-bg: var(--vet-primario-oscuro);
+    --bs-btn-active-border-color: var(--vet-primario-oscuro);
+    --bs-btn-disabled-bg: var(--vet-primario);
+    --bs-btn-disabled-border-color: var(--vet-primario);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--vet-primario);
+    --bs-btn-border-color: #cbd5e1;
+    --bs-btn-hover-bg: var(--vet-primario);
+    --bs-btn-hover-border-color: var(--vet-primario);
+    --bs-btn-active-bg: var(--vet-primario-oscuro);
+    --bs-btn-active-border-color: var(--vet-primario-oscuro);
+}
+
+.btn-outline-danger {
+    --bs-btn-border-color: #fecaca;
+}
+
+.btn-outline-secondary {
+    --bs-btn-border-color: #cbd5e1;
+    --bs-btn-color: var(--vet-texto-suave);
+}
+
+/* El anillo azul del foco desentona con el verde de la marca */
+.form-control:focus,
+.form-select:focus,
+.btn:focus-visible {
+    border-color: #5eead4;
+    box-shadow: 0 0 0 .2rem rgba(15, 118, 110, .18);
+}
+
+/* ---- Buscador ---- */
+
+.barra-busqueda {
+    max-width: 520px;
+}
+
+.barra-busqueda .input-group-text {
+    background-color: #fff;
+    border-right: 0;
+    color: var(--vet-texto-suave);
+}
+
+.barra-busqueda .form-control {
+    border-left: 0;
+    padding-left: 0;
+}
+
+.barra-busqueda .form-control::placeholder {
+    color: #94a3b8;
+}
+
+/* ---- Combos con buscador (dentro de los formularios) ---- */
+
+/* El desplegable que todavía no tiene nada para elegir (por ejemplo, Mascota antes
+   de elegir un dueño) se ve apagado, para que se entienda que falta un paso. */
+.form-select:has(option:only-child) {
+    color: var(--vet-texto-suave);
+    background-color: #f8fafc;
+}
+
+/* El texto de ayuda debajo del combo ("2 dueños encontrados") */
+.form-text {
+    color: var(--vet-texto-suave);
+}
+
+/* ---- Tabla: el contenedor pasa a ser una tarjeta ---- */
+
+.table-responsive {
+    background-color: #fff;
+    border: 1px solid var(--vet-borde);
+    border-radius: 12px;
+    overflow: hidden;                       /* para que la tabla respete las esquinas */
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+/* Los textos de ayuda que van debajo de la tabla ("Toca una fila para...",
+   "Todavia no hay datos"): sin esto quedan pegados al borde de la tarjeta. */
+.table-responsive ~ p {
+    margin-top: .85rem;
+}
+
+.table > tbody > tr > td,
+.table > thead > tr > th {
+    padding: .6rem .75rem;
+    vertical-align: middle;
+    border-color: var(--vet-borde);
+}
+
+/* La cabecera negra de Bootstrap (.table-dark) se reemplaza por una clara,
+   con el texto en mayúsculas chiquitas: se lee como encabezado sin gritar. */
+.table > thead.table-dark > tr > th {
+    background-color: #f8fafc;
+    color: var(--vet-texto-suave);
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-bottom: 1px solid var(--vet-borde);
+}
+
+/* Las rayas cebra compiten con el color de la fila activa: quedan apenas */
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+    --bs-table-bg-type: transparent;
+}
+
+.table-hover > tbody > tr:hover > td {
+    --bs-table-accent-bg: var(--vet-primario-suave);
+    background-color: var(--vet-primario-suave);
+}
+
+/* ---- Fila clickeable y orden por columna ---- */
+
+/* La fila entera abre el panel de detalle, así que tiene que "verse" clickeable */
+.fila-clicable {
+    cursor: pointer;
+}
+
+.fila-clicable:focus-visible {
+    outline: 2px solid var(--vet-primario);
+    outline-offset: -2px;
+}
+
+th.ordenable {
+    cursor: pointer;
+    user-select: none;       /* que un doble click no seleccione el texto */
+    white-space: nowrap;
+}
+
+.table > thead.table-dark > tr > th.ordenable:hover {
+    background-color: #eef2f6;
+    color: var(--vet-primario);
+}
+
+.flecha-orden {
+    font-size: .7rem;
+    color: var(--vet-primario);
+}
+
+/* ---- Etiquetas de estado ---- */
+
+.badge {
+    font-weight: 600;
+    letter-spacing: .02em;
+    border-radius: 6px;
+}
+
+/* ---- Paginador ---- */
+
+/* Bootstrap 5.3 expone el paginador como variables, igual que los botones: se le
+   cambian los valores y queda con el verde de la marca sin pelear con ninguna regla. */
+.pagination {
+    --bs-pagination-color: var(--vet-texto-suave);
+    --bs-pagination-bg: #fff;
+    --bs-pagination-border-color: var(--vet-borde);
+    --bs-pagination-border-radius: 8px;      /* el mismo radio que los botones */
+    --bs-pagination-hover-color: var(--vet-primario);
+    --bs-pagination-hover-bg: var(--vet-primario-suave);
+    --bs-pagination-hover-border-color: var(--vet-borde);
+    --bs-pagination-focus-color: var(--vet-primario);
+    --bs-pagination-focus-bg: var(--vet-primario-suave);
+    --bs-pagination-focus-box-shadow: 0 0 0 .2rem rgba(15, 118, 110, .18);
+    --bs-pagination-active-bg: var(--vet-primario);
+    --bs-pagination-active-border-color: var(--vet-primario);
+    --bs-pagination-disabled-color: #94a3b8;
+    --bs-pagination-disabled-bg: #f8fafc;
+    --bs-pagination-disabled-border-color: var(--vet-borde);
+}
+
+/* Los numeros pasan de uno a dos digitos: sin un ancho minimo, los botones se agrandan
+   al pasar de la pagina 9 a la 10 y la fila entera "salta". */
+.pagination .page-link {
+    min-width: 2.25rem;
+    text-align: center;
+}
+
+/* El paginador se muestra con display:flex, pero arranca con d-none en el HTML y es
+   app.js el unico que decide cuando sacarsela (si hay una sola pagina, no se muestra). */
+#paginador {
+    display: flex;
+    margin-top: .85rem;
+}
+
+#paginador.d-none {
+    display: none !important;
+}
+
+/* ---- Modales y panel lateral ---- */
+
+.modal-content,
+.offcanvas {
+    border: 0;
+    border-radius: 14px;
+}
+
+.offcanvas {
+    border-radius: 0;
+}
+
+.modal-header,
+.offcanvas-header {
+    border-bottom: 1px solid var(--vet-borde);
+}
+
+.modal-title,
+.offcanvas-title {
+    font-weight: 600;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--vet-borde);
+}
+
+/* En un celular el panel ocupa toda la pantalla; en una notebook, un costado */
+@media (min-width: 576px) {
+    .offcanvas.offcanvas-end {
+        width: 420px;
+    }
+}
+
+#fichaPanel dt {
+    font-weight: 400;
+    color: var(--vet-texto-suave);
+}
+
+#listaRelacionados .list-group-item {
+    border-color: var(--vet-borde);
+}
+
+/* ---- Celular (hasta 575px) ---- */
+
+@media (max-width: 575.98px) {
+    /* Columnas de relleno: en una pantalla angosta estorban más de lo que suman.
+       El dato sigue estando: se ve completo en el panel de detalle. */
+    .col-opcional {
+        display: none;
+    }
+
+    /* El título de la página y el botón "+ Nuevo" se apilan en vez de apretarse */
+    .encabezado-pagina {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: .5rem;
+    }
+
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .barra-busqueda {
+        max-width: none;
+    }
+
+    /* En una pantalla angosta el resumen y los botones no entran en la misma linea */
+    #paginador {
+        justify-content: center !important;
+    }
+}

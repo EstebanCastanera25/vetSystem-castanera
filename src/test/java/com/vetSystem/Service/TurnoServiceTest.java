@@ -20,14 +20,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -180,5 +184,35 @@ class TurnoServiceTest {
 
         verify(turnoRepository, never()).save(any(Turno.class));
         verifyNoInteractions(turnoMapper);
+    }
+
+    @Test
+    @DisplayName("Listar turnos sin filtro los trae todos")
+    void listarTurnos_cuandoNoHayFiltro_listaTodosLosTurnos() {
+        // ARRANGE
+        // OJO: findAll() y findAll(Pageable) son metodos DISTINTOS para Mockito.
+        when(turnoRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
+
+        // ACT
+        turnoService.listarTurnos(null, 0, 10, null, null);
+
+        // ASSERT: sin estado NO se usa la consulta filtrada
+        verify(turnoRepository).findAll(any(Pageable.class));
+        verify(turnoRepository, never()).findByEstado(any(), any());
+    }
+
+    @Test
+    @DisplayName("Listar turnos con un estado usa la consulta filtrada")
+    void listarTurnos_cuandoHayFiltroDeEstado_usaLaConsultaFiltrada() {
+        // ARRANGE
+        when(turnoRepository.findByEstado(eq(EstadoTurno.PENDIENTE), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        // ACT
+        turnoService.listarTurnos(EstadoTurno.PENDIENTE, 0, 10, null, null);
+
+        // ASSERT: con estado NO se traen todos para filtrar despues en memoria
+        verify(turnoRepository).findByEstado(eq(EstadoTurno.PENDIENTE), any(Pageable.class));
+        verify(turnoRepository, never()).findAll(any(Pageable.class));
     }
 }
