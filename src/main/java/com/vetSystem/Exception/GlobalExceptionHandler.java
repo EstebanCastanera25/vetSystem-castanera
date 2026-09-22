@@ -2,6 +2,9 @@ package com.vetSystem.Exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import main.java.com.vetSystem.Exception.CupoExcedidoException;
+import main.java.com.vetSystem.Exception.StockInsuficienteException;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,21 @@ import java.time.LocalDateTime;
 @Slf4j  // Lombok: genera el logger "log"
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    // El medicamento no tiene stock para recetar -> HTTP 422.
+    // REGLA DE NEGOCIO Tampoco es un 409: no hay conflicto con el estado del recurso,
+    // hay una precondicion del dominio que no se cumple.
+    @ExceptionHandler(StockInsuficienteException.class)
+    public ResponseEntity<ErrorResponse> handleStockInsuficiente(StockInsuficienteException ex,
+                                                                 HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    }
+
+     // El duenio ya llego al cupo de mascotas -> HTTP 422, por el mismo motivo.
+    @ExceptionHandler(CupoExcedidoException.class)
+    public ResponseEntity<ErrorResponse> handleCupoExcedido(CupoExcedidoException ex,
+                                                            HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    }
 
     // Bean Validation falló (@Valid) → HTTP 400 con los mensajes de todos los campos
     @ExceptionHandler(MethodArgumentNotValidException.class)
