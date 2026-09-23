@@ -12,6 +12,10 @@ import com.vetSystem.Mapper.TurnoMapper;
 import com.vetSystem.Repository.MascotaRepository;
 import com.vetSystem.Repository.TurnoRepository;
 import com.vetSystem.Repository.VeterinarioRepository;
+
+import com.vetSystem.Mapper.MedicamentoMapper;
+import com.vetSystem.Repository.MedicamentoRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+
+import com.vetSystem.Mapper.MedicamentoMapper;
+import com.vetSystem.Repository.MedicamentoRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,6 +60,13 @@ class TurnoServiceTest {
 
     @Mock
     private TurnoMapper turnoMapper;
+
+        @Mock
+    private MedicamentoRepository medicamentoRepository;
+
+    @Mock
+    private MedicamentoMapper medicamentoMapper;
+
 
     @InjectMocks
     private TurnoService turnoService;
@@ -107,8 +121,9 @@ class TurnoServiceTest {
 
         when(mascotaRepository.findById(request.getMascotaId())).thenReturn(Optional.of(mascota));
         when(veterinarioRepository.findById(request.getVeterinarioId())).thenReturn(Optional.of(veterinario));
-        when(turnoRepository.existsByVeterinarioIdAndFechaAndHora(
-                request.getVeterinarioId(), request.getFecha(), request.getHora())).thenReturn(false);
+        when(turnoRepository.findFirstByVeterinarioIdAndFechaAndHora(
+                request.getVeterinarioId(), request.getFecha(), request.getHora()))
+                .thenReturn(Optional.empty());
         when(turnoRepository.save(any(Turno.class))).thenReturn(turnoGuardado);
         when(turnoMapper.toDTO(turnoGuardado)).thenReturn(responseDTO);
 
@@ -135,16 +150,22 @@ class TurnoServiceTest {
     @Test
     @DisplayName("Lanza TurnoSuperpuestoException cuando el horario ya esta ocupado")
     void crearTurno_cuandoHaySuperposicion_lanzaTurnoSuperpuestoException() {
+        Turno turnoOcupado = new Turno();
+        turnoOcupado.setId(99L);
+        turnoOcupado.setFecha(request.getFecha());
+        turnoOcupado.setHora(request.getHora());
         // ARRANGE
         when(mascotaRepository.findById(request.getMascotaId())).thenReturn(Optional.of(mascota));
         when(veterinarioRepository.findById(request.getVeterinarioId())).thenReturn(Optional.of(veterinario));
-        when(turnoRepository.existsByVeterinarioIdAndFechaAndHora(
-                request.getVeterinarioId(), request.getFecha(), request.getHora())).thenReturn(true);
+        when(turnoRepository.findFirstByVeterinarioIdAndFechaAndHora(
+                request.getVeterinarioId(), request.getFecha(), request.getHora()))
+                .thenReturn(Optional.of(turnoOcupado));
 
         // ACT
         // ASSERT
         assertThatThrownBy(() -> turnoService.crearTurno(request))
                 .isInstanceOf(TurnoSuperpuestoException.class)
+                .hasMessageContaining("99")
                 .hasMessageContaining(request.getHora().toString());
 
         // La regla de negocio debe impedir la escritura para no dejar rastros en la base de datos.

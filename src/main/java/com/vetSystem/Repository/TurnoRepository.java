@@ -10,13 +10,14 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TurnoRepository extends JpaRepository<Turno, Long> {
 
-    // Validar superposición: ¿el veterinario ya tiene un turno ese día a esa hora?
-    // SELECT COUNT(*) > 0 FROM turnos WHERE veterinario_id = ? AND fecha = ? AND hora = ?
-    boolean existsByVeterinarioIdAndFechaAndHora(Long veterinarioId, LocalDate fecha, LocalTime hora);
+    // Validar superposicion: el turno del veterinario en ese dia y hora, si existe.
+    //  SELECT * FROM turnos WHERE veterinario_id = ? AND fecha = ? AND hora = ? LIMIT 1
+    Optional<Turno> findFirstByVeterinarioIdAndFechaAndHora(Long veterinarioId, LocalDate fecha, LocalTime hora);
 
     // Agenda de un veterinario en una fecha
     List<Turno> findByVeterinarioIdAndFecha(Long veterinarioId, LocalDate fecha);

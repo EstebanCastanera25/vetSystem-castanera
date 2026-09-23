@@ -7,6 +7,9 @@ import com.vetSystem.Entity.Mascota;
 import com.vetSystem.Mapper.MascotaMapper;
 import com.vetSystem.Repository.DuenioRepository;
 import com.vetSystem.Repository.MascotaRepository;
+
+import main.java.com.vetSystem.Exception.CupoExcedidoException;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -179,4 +183,30 @@ class MascotaServiceTest {
         mascota.setDuenio(duenio);
         return mascota;
     }
+
+    @Test
+    @DisplayName("Rechaza la sexta mascota de un duenio que ya tiene cinco")
+    void registrarEntidad_cuandoElDuenioLlegoAlCupo_lanzaCupoExcedidoException() {
+        // ARRANGE
+        Duenio duenio = new Duenio();
+        duenio.setId(3L);
+
+        MascotaDTO dto = new MascotaDTO();
+        dto.setNombre("Sexta");
+        dto.setEspecie("Perro");
+        dto.setDuenioId(3L);
+
+        when(duenioRepository.findById(3L)).thenReturn(Optional.of(duenio));
+        when(mascotaRepository.countByDuenioId(3L)).thenReturn(5L);
+
+        // ACT / ASSERT
+        assertThatThrownBy(() -> mascotaService.registrarEntidad(dto))
+                .isInstanceOf(CupoExcedidoException.class)
+                .hasMessageContaining("5");
+
+        // La regla debe cortar ANTES de escribir: nada de mascotas a medio guardar.
+        verify(mascotaRepository, never()).save(any(Mascota.class));
+    }
+
+
 }
