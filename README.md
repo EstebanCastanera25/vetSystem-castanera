@@ -200,3 +200,58 @@ python -m http.server 5500 --directory frontend
 | `SwaggerDocsTest` | Contexto (`@SpringBootTest` + MockMvc) | Que `/v3/api-docs` genere la especificación con los `@Tag` y los `@Schema` |
 | `VetSystemApplicationTests` | Contexto (`@SpringBootTest` sobre H2) | Que el contexto de Spring levante y el esquema se genere |
 
+
+
+
+## Parcial 1 — Decisiones de diseño
+
+### Relación Turno–Medicamento
+Modelé la receta como un **Many-to-Many unidireccional** desde `Turno`: el turno conoce sus
+medicamentos, pero el medicamento no sabe en qué turnos se usó. Lo dejé unidireccional porque
+nadie en la app pregunta "en qué turnos se recetó este remedio", y tener las dos puntas me
+obligaría a sincronizarlas a mano. Usé `List` y no `Set` a propósito: si en un turno se recetan
+dos unidades del mismo medicamento, un `Set` descartaría la segunda en silencio y el stock ya
+habría bajado igual. La relación es `LAZY` para que listar turnos no arrastre la receta de cada
+uno. Le puse `@ToString.Exclude` y `@EqualsAndHashCode.Exclude` porque si no Lombok recorre la
+relación y se cuelga.
+
+### Validación de stock
+Recetar un medicamento descuenta una unidad de su stock, y si no hay se rechaza. La validación
+está en `TurnoService`, no en el controller ni en la entidad, porque es una regla del negocio: el
+controller solo traduce a HTTP. Comparo con `<= 0` y no con `== 0` a propósito, porque si por un
+error anterior el stock quedó negativo, con `== 0` seguiría entregando. También contemplo el
+`null`, y por eso el stock es `Integer` y no `int`: así distingo "no vino el dato" de "es cero".
+Tiro `StockInsuficienteException`, que el handler convierte en **422** con el nombre del
+medicamento y las unidades que quedan. El descuento y el alta en la receta pasan en el mismo
+método `@Transactional`, así que o se guardan los dos o no se guarda ninguno.
+
+### Solapamiento
+Un veterinario no puede tener dos turnos en la misma fecha y hora. La regla existía desde el
+Sprint 4, pero el mensaje solo decía que había superposición y no servía de mucho. Ahora, en vez
+de preguntar si existe un turno pisado, **busco el turno** y lo nombro por su id en el error, así
+el cliente sabe cuál reprogramar. El chequeo corre después de validar que existan la mascota y el
+veterinario, porque no tiene sentido buscar conflictos contra un veterinario que no existe. La
+mapeo a **409** y no a 422 porque acá sí hay otro recurso concreto ocupando el lugar. La
+comparación es por fecha y hora exactas, que es lo único que el modelo guarda: el turno no tiene
+duración, así que no habría con qué calcular un rango.
+
+### Cupo de mascotas
+Un dueño no puede tener más de **5 mascotas activas**, y el límite es una constante de
+`MascotaService`, no un número suelto repetido. El control va en el alta, antes de armar la
+entidad, porque lo barato es no crearla. Cuento con `countByDuenioId`, que resuelve el total en la
+base, en vez de traer todas las mascotas para hacerles `size()`. Uso `>= 5` y no `> 5`: con el
+mayor estricto el dueño terminaría llegando a seis. Acá "mascota activa" es toda fila que existe,
+porque la baja es física y no hay bandera de estado; si algún día se agrega borrado lógico, el
+único cambio sería el método del repositorio. Cuando se pasa, `CupoExcedidoException` → **422**
+con el id del dueño, cuántas tiene y cuál es el máximo.
+
+### Decisión más difícil
+
+La que más me costó fue elegir entre `List` y `Set` para los medicamentos del turno. `Set` parecía
+lo correcto: evita duplicados y es lo que uno espera de una N a N. El problema es que en este
+dominio el duplicado **significa algo**: dos veces el mismo medicamento es que se entregaron dos
+unidades. Con `Set` la segunda se descartaba sin avisar y el stock ya había bajado, o sea que la
+base decía una cosa y la farmacia otra. Preferí `List` y que la colección refleje lo que
+realmente pasó, aunque eso deje el control del stock del lado del service. La otra duda fue qué
+código devolver cuando falla una regla: terminé usando 409 cuando hay otro recurso en conflicto
+(el turno ocupado) y 422 cuando lo que no se cumple es una condición del dominio (stock, cupo).
