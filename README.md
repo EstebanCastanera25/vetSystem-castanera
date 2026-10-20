@@ -4,12 +4,13 @@ TP de Microservicios y APIs Escalables - UP 2C 2026 - Esteban Castanera
 
 En la fase 2 pasamos el monolito de la veterinaria (esta en la rama `main`) a microservicios.
 
-Usamos Spring Boot 4.1.0, Spring Cloud 2025.1.3 (Eureka y Config Server), JPA, MySQL y Maven multi modulo con Java 21.
+Usamos Spring Boot 4.1.0, Spring Cloud 2025.1.3 (Eureka, Config Server, OpenFeign y Gateway), JPA, MySQL y Maven multi modulo con Java 21.
 
 ## Modulos
 
 | Modulo | Puerto | Base |
 |---|---|---|
+| api-gateway | 8080 | - |
 | config-server | 8888 | - |
 | eureka-server | 8761 | - |
 | ms-duenio | 8081 | duenio_db |
@@ -70,6 +71,28 @@ Cuando se crea un turno, ms-turno tiene que validar que la mascota y el veterina
 
 Para probarlo hay que levantar ms-mascota y ms-veterinario antes de crear turnos.
 
+## API Gateway
+
+El api-gateway (puerto 8080) es la unica entrada: desde este sprint el cliente (Postman, un frontend) llama todo a `localhost:8080` y no tiene que saber los puertos de cada microservicio.
+
+| Path en :8080 | Va a |
+|---|---|
+| /api/duenios/** | lb://ms-duenio |
+| /api/mascotas/** | lb://ms-mascota |
+| /api/veterinarios/** | lb://ms-veterinario |
+| /api/turnos/** | lb://ms-turno |
+| /v1/duenios/** | lb://ms-duenio (con RewritePath a /api/duenios/**) |
+
+- `lb://` quiere decir que el gateway busca el servicio en Eureka y si hay varias instancias reparte entre ellas.
+- Spring Cloud Gateway es reactivo (WebFlux), por eso el modulo no tiene spring-boot-starter-webmvc.
+- Tiene CORS habilitado para cualquier origen (en produccion habria que poner el dominio del frontend).
+- `LoggingFilter` es un filtro global que loguea cada peticion: `[GATEWAY] --> GET /api/duenios` y cuando vuelve `[GATEWAY] <-- GET /api/duenios 200 156ms`.
+- La ruta `/v1/duenios` es un ejemplo de versionar la api publica: el gateway reescribe la url a `/api/duenios` y ms-duenio no se entera.
+- La configuracion del gateway (rutas, cors, actuator) esta en `api-gateway.yml` del config server.
+- En http://localhost:8080/actuator/gateway/routes se ven las rutas. Esta en solo lectura, no se pueden crear rutas por ahi.
+
+Ojo: en la version de Spring Cloud que usamos el starter se llama `spring-cloud-starter-gateway-server-webflux` y la config va en `spring.cloud.gateway.server.webflux` (en el pdf figura con el nombre viejo).
+
 ## Como levantarlo
 
 1. Levantar MySQL y crear las bases (las tablas las crea Hibernate):
@@ -84,7 +107,10 @@ CREATE DATABASE turno_db;
    - `mvnw spring-boot:run -pl config-server` (primero, porque si no los microservicios arrancan sin su configuracion)
    - `mvnw spring-boot:run -pl eureka-server` (el dashboard esta en http://localhost:8761)
    - despues los microservicios en cualquier orden: `mvnw spring-boot:run -pl ms-duenio`, y lo mismo con ms-mascota, ms-veterinario y ms-turno
-4. Swagger: http://localhost:8081/swagger-ui/index.html (con 8082, 8083 y 8084 para los otros)
+   - por ultimo `mvnw spring-boot:run -pl api-gateway`
+4. En Eureka tienen que aparecer 5 instancias: los 4 microservicios y API-GATEWAY
+5. Probar todo por el gateway, por ejemplo `GET http://localhost:8080/api/duenios`
+6. Swagger de cada microservicio: http://localhost:8081/swagger-ui/index.html (con 8082, 8083 y 8084 para los otros)
 
 ## Actuator
 
@@ -94,6 +120,8 @@ Los microservicios tienen habilitados health, info, metrics, env, beans y mappin
 - http://localhost:8081/actuator/metrics
 
 ## Endpoints
+
+Todos se llaman por el gateway (`http://localhost:8080`).
 
 ms-duenio:
 
