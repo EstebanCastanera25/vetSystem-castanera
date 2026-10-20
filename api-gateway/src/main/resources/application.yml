@@ -8,6 +8,20 @@ spring:
     gateway:
       server:
         webflux:
+          # cors: permite que un frontend de otro dominio llame al gateway (el * es solo para desarrollo)
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                  - PATCH
+                allowedHeaders: "*"
+                allowCredentials: false
           discovery:
             locator:
               # tambien crea rutas automaticas con el nombre de cada servicio en eureka
