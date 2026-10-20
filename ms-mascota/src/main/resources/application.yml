@@ -1,21 +1,9 @@
 spring:
   application:
     name: ms-mascota
-  datasource:
-    url: jdbc:mysql://localhost:3306/mascota_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: root
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+  config:
+    # el resto de la configuracion (base de datos, eureka, jpa) viene del config-server
+    import: "optional:configserver:http://localhost:8888"
 
 server:
   port: 8082
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
