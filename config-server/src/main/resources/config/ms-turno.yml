@@ -3,6 +3,25 @@ spring:
     url: jdbc:mysql://localhost:3306/turno_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: root
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            # sin timeout, si se cae ms-mascota ms-turno queda esperando para siempre
+            connectTimeout: 3000
+            readTimeout: 5000
+            # basic = loguea metodo, url, status y tiempo de cada llamada
+            loggerLevel: basic
+      compression:
+        request:
+          enabled: true
+        response:
+          enabled: true
+
+logging:
+  level:
+    com.patitas.turno.adapter.out.feign: DEBUG
 
 info:
   app:
