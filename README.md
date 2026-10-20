@@ -56,7 +56,19 @@ El config server usa el perfil native, o sea que los archivos de configuracion e
 
 En el `application.yml` de cada microservicio quedo solo el nombre, el puerto y el `spring.config.import` que apunta al config server.
 
-Con Eureka cada microservicio se registra con su nombre (ms-duenio, ms-mascota...), asi mas adelante se pueden llamar entre ellos por nombre en vez de usar localhost:puerto.
+Con Eureka cada microservicio se registra con su nombre (ms-duenio, ms-mascota...), asi se pueden llamar entre ellos por nombre en vez de usar localhost:puerto.
+
+## Comunicacion entre microservicios (OpenFeign)
+
+Cuando se crea un turno, ms-turno tiene que validar que la mascota y el veterinario existan, pero esos datos estan en otros microservicios. Para eso usamos OpenFeign:
+
+- `MascotaFeignClient` y `VeterinarioFeignClient` son interfaces con `@FeignClient(name = "ms-mascota")` / `"ms-veterinario"`. Feign arma el cliente HTTP y Eureka resuelve el nombre a la IP y puerto reales.
+- Para respetar la hexagonal, el dominio no usa Feign directo: tiene los puertos de salida `MascotaServicePort` y `VeterinarioServicePort` (`existsById`), y los implementan `MascotaFeignAdapter` y `VeterinarioFeignAdapter`.
+- Si el otro servicio responde 404, el adapter devuelve false y ms-turno contesta 404. Si el otro servicio esta caido, contesta 503.
+- No compartimos clases entre microservicios: ms-turno tiene sus propios `MascotaResponse` y `VeterinarioResponse` solo con los campos que necesita.
+- En `ms-turno.yml` del config server estan los timeouts (3 s para conectar, 5 s para leer), asi si se cae ms-mascota ms-turno no queda colgado esperando.
+
+Para probarlo hay que levantar ms-mascota y ms-veterinario antes de crear turnos.
 
 ## Como levantarlo
 
@@ -113,7 +125,7 @@ ms-turno:
 
 | Metodo | Ruta | Respuesta |
 |---|---|---|
-| GET / POST | /api/turnos | 200 / 201 (el turno se crea PENDIENTE) |
+| GET / POST | /api/turnos | 200 / 201 (el turno se crea PENDIENTE), 404 si no existe la mascota o el veterinario, 503 si ms-mascota o ms-veterinario estan caidos |
 | GET | /api/turnos/{id} | 200 o 404 |
 | GET | /api/turnos/veterinario/{veterinarioId} | 200 |
 | GET | /api/turnos/mascota/{mascotaId} | 200 |
