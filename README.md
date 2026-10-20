@@ -1,257 +1,61 @@
-# vet-system — Clínica Veterinaria "Patitas Felices"
+# Patitas Felices - Microservicios
 
-Trabajo Práctico de la materia **Microservicios y APIs Escalables** — Universidad de Palermo, 2C 2026.
+Trabajo practico de Microservicios y APIs Escalables (UP 2C 2026).
+En la fase 2 el monolito de la veterinaria (rama `main`) se pasa a microservicios.
 
-Sistema de gestión de la clínica veterinaria. 
-Fase 1: monolito MVC con Spring Boot. 
+Stack: Spring Boot 4.1.0, Spring Data JPA, MySQL, Maven multi-modulo, Java 21.
 
+## Modulos
 
-## Integrantes
+| Microservicio | Puerto | Base de datos | Estado |
+|---|---|---|---|
+| ms-duenio | 8081 | duenio_db | Sprint 9 |
+| ms-mascota | 8082 | - | Sprint 10 |
+| ms-veterinario | 8083 | - | Sprint 10 |
+| ms-turno | 8084 | - | Sprint 10 |
 
-- Esteban Castañera
+## Arquitectura
 
-## Stack
-
-- Java 21
-- Spring Boot 4.1.0 (Spring Web MVC, Spring Data JPA, Lombok, DevTools)
-- MapStruct 1.5.5 (mapeo Entity ↔ DTO) + Bean Validation
-- springdoc-openapi 3.1.1 (Swagger UI / OpenAPI 3)
-- MySQL 8 (base `vet_system`) · H2 en memoria solo para los tests
-- JUnit 5 + Mockito + MockMvc
-- Frontend: HTML + Bootstrap 5.3.3 (CDN) + JavaScript vanilla con Fetch API
-- Maven (wrapper incluido, no hace falta instalarlo)
-
-## Cómo levantar el proyecto
-
-1. Tener MySQL corriendo en `localhost:3306` con usuario `root` / password `root`.
-2. Crear la base de datos (solo la primera vez):
-
-   ```sql
-   CREATE DATABASE vet_system CHARACTER SET utf8mb4;
-   ```
-
-3. Desde la raíz del proyecto:
-
-   ```bash
-   # Windows (en PowerShell el .\ es obligatorio; en CMD es opcional)
-   .\mvnw.cmd spring-boot:run
-   # Linux / Mac
-   ./mvnw spring-boot:run
-   ```
-
-4. La API queda en `http://localhost:8080`. Endpoint de prueba: `GET http://localhost:8080/api/duenios`.
-
-Hibernate crea/actualiza las tablas automáticamente (`spring.jpa.hibernate.ddl-auto=update`).
-
-## Estructura (arquitectura MVC + Repository)
+Cada microservicio usa arquitectura hexagonal (Ports & Adapters). El codigo de ms-duenio esta en `com.patitas.duenio` y se divide en tres capas:
 
 ```
-vetSystem-castanera/
-├── src/main/java/com/vetSystem/
-│   ├── Controller/   → recibe las peticiones HTTP y devuelve JSON
-│   ├── Service/      → lógica de negocio y validaciones
-│   ├── Repository/   → acceso a datos (Spring Data JPA)
-│   ├── Entity/       → entidades JPA (modelo de dominio)
-│   ├── DTO/          → lo que viaja por la API (la entidad no sale del Service)
-│   ├── Mapper/       → conversión Entity ↔ DTO (MapStruct)
-│   ├── Exception/    → excepciones propias + GlobalExceptionHandler + ErrorResponse
-│   ├── config/       → SwaggerConfig (metadatos de OpenAPI) y CorsConfig
-│   └── util/         → TextoUtil (normaliza nombres) y PaginaUtil (paginación y orden)
-├── frontend/         → interfaz web (HTML + Bootstrap + JS), NO la sirve Spring
-│   ├── app.js        → núcleo compartido por las 4 páginas
-│   └── estilos.css   → lo que Bootstrap no cubre
-└── docs/             → diagrama de clases y análisis del monolito
+domain/
+  model/           Duenio (entidad)
+  port/in/         DuenioService (lo que se puede hacer con los duenios)
+  port/out/        DuenioRepository (lo que el dominio necesita para guardar)
+  exception/       DuenioNotFoundException, DuplicatedEmailException
+application/       DuenioServiceImpl (casos de uso)
+adapter/
+  in/web/          DuenioController, GlobalExceptionHandler
+  in/web/dto/      DuenioRequest, DuenioResponse, DuenioMapper
+  out/persistence/ DuenioJpaRepository
 ```
 
-## Dominio
+- **Domain**: es la parte de adentro. Tiene la entidad y los puertos, que son interfaces. No depende de Spring.
+- **Application**: `DuenioServiceImpl` implementa el puerto de entrada y usa el puerto de salida. Aca va la regla de negocio: no puede haber dos duenios con el mismo email.
+- **Adapters**: conectan el dominio con el exterior. El controller REST es el de entrada; `DuenioJpaRepository` es el de salida, extiende `JpaRepository` e implementa `DuenioRepository`.
 
-- `Duenio` (1) ──< (N) `Mascota`
-- `Turno` (N) >── (1) `Mascota` y `Turno` (N) >── (1) `Veterinario`
-- `EstadoTurno`: PENDIENTE / CONFIRMADO / ATENDIDO / CANCELADO
+**Regla de dependencias:** las dependencias apuntan siempre hacia adentro. Los adaptadores conocen al dominio, pero el dominio no conoce a los adaptadores. `DuenioServiceImpl` no importa nada de `adapter`.
 
-Diagrama de clases: [docs/diagrama-clases.md](docs/diagrama-clases.md)
+### Por que el controller no usa DuenioServiceImpl
 
-## Sprints
+El controller recibe la interface `DuenioService` y no la clase `DuenioServiceImpl`. La interface es el puerto de entrada: dice que se puede hacer y no como se hace. El controller depende de ese contrato, y Spring le inyecta la implementacion que encuentre. Si mañana cambia la implementacion (otra logica, un mock para tests), el controller no se toca.
 
-| Rama | Contenido |
-|---|---|
-| `sprint-01` | Setup del proyecto + modelo de dominio (4 entidades JPA) |
-| `sprint-02` | Arquitectura MVC + API REST + CRUD de Dueño |
-| `sprint-03` | Relaciones JPA + CRUD de Mascota + JSON circular resuelto |
-| `sprint-04` | DTOs + MapStruct + CRUD de Veterinario y Turno (con validación de superposición) |
-| `sprint-05` | Bean Validation en los DTOs + `GlobalExceptionHandler` + `ErrorResponse` |
-| `sprint-06` | Tests automatizados: JUnit 5 + Mockito (Service) y MockMvc (Controller) |
-| `sprint-07` | Swagger/OpenAPI 3 + CORS + frontend con Bootstrap 5 y Fetch + análisis del monolito |
+Por la misma razon, el controller tampoco trabaja con la entidad `Duenio`. Recibe y devuelve DTOs (`DuenioRequest` / `DuenioResponse`), y el mapper hace la conversion. Asi la entidad de la base no queda expuesta en la API.
 
+## Como levantarlo
 
-## Documentación de la API (Swagger)
+1. Arrancar MySQL y crear la base: `CREATE DATABASE duenio_db;` (la tabla `duenios` la crea Hibernate)
+2. Compilar desde la raiz: `mvnw clean package -pl ms-duenio`
+3. Levantar: `mvnw spring-boot:run -pl ms-duenio`
+4. Swagger: http://localhost:8081/swagger-ui/index.html
 
-Con la aplicación levantada:
+## Endpoints de ms-duenio
 
-| Qué | URL |
-|---|---|
-| Documentación interactiva (probar los endpoints) | http://localhost:8080/swagger-ui.html |
-| Especificación OpenAPI en JSON | http://localhost:8080/v3/api-docs |
-
-La documentación **se genera sola** a partir de las anotaciones del código: `@Tag` agrupa los
-endpoints de cada controller, `@Operation` describe qué hace cada uno, `@ApiResponse` documenta los
-códigos HTTP que puede devolver y `@Schema` describe cada campo de los DTOs con un ejemplo. El
-título y la versión que se ven arriba salen de [`config/SwaggerConfig.java`](src/main/java/com/vetSystem/config/SwaggerConfig.java).
-
-Desde Swagger UI se puede usar el botón **"Try it out"** para ejecutar los endpoints sin Postman.
-
-## Frontend
-
-La interfaz está en [`frontend/`](frontend/), **fuera de `src/`**: son archivos estáticos que Spring
-no sirve, y le pegan a la API por HTTP como lo haría cualquier cliente externo.
-
-| Página | Qué permite |
-|---|---|
-| `index.html` | Dueños: CRUD, buscador y panel con **sus mascotas** |
-| `mascotas.html` | Mascotas: CRUD (el dueño se elige de un combo), buscador y panel con **sus turnos** |
-| `veterinarios.html` | Veterinarios: CRUD, buscador y panel con **su agenda del día** |
-| `turnos.html` | Turnos: alta, cambio de estado (PATCH), filtro por estado y panel con el **historial de la mascota** |
-
-Las cuatro páginas comparten: buscador contra el backend (`?buscar=`), orden por columna haciendo
-click en el encabezado, panel lateral al tocar una fila, y los errores de validación marcados
-campo por campo.
-
-**Los cuatro listados están paginados.** `GET /api/duenios?pagina=0&tamanio=10&orden=apellido&direccion=asc`
-devuelve `{"contenido": [...], "pagina", "tamanio", "totalElementos", "totalPaginas"}`. Es lo que
-pide el **RF-02 del SRS** ("`GET /api/duenios` retorna HTTP 200 con lista paginada"), extendido a
-las cuatro entidades. Detalles que conviene poder explicar:
-
-- La respuesta es un **DTO propio** (`PaginaDTO`), no el `Page` de Spring Data: el JSON de esta
-  API está en castellano (`mensaje`, no `message`) y, por el mismo criterio con que la entidad JPA
-  no sale del service, tampoco sale una clase de la librería de persistencia. La alternativa
-  idiomática era `spring.data.web.pageable.serialization-mode=via-dto` + `PagedModel`.
-- **El orden lo hace la base, no el navegador.** Ordenar en memoria sólo ordenaría la página que
-  estás viendo. Además, todos los órdenes terminan en `id`: sin un orden total determinístico, una
-  fila puede aparecer en dos páginas o en ninguna.
-- Hay una **lista de campos ordenables** por entidad, que además traduce: la tabla de turnos ordena
-  por una columna "mascotaNombre" que en la entidad es `mascota.nombre`. Un campo que no esté en la
-  lista cae al orden por defecto, en vez de hacer fallar la consulta con un 500 disparable desde la URL.
-- Los parámetros fuera de rango (`pagina=-1`, `tamanio=0`, `tamanio=99999`) **se recortan**; sólo
-  da 400 lo que no es un número. Misma doctrina que el buscador: un filtro opcional nunca falla.
-
-**Los desplegables de los formularios también se buscan escribiendo.** En "Nuevo turno" primero
-se busca al dueño (por cédula, nombre o apellido) y el combo de mascotas se llena con las de
-**ese** dueño, pidiendo `GET /api/duenios/{id}/mascotas`; si el texto no coincide con ningún
-dueño, se buscan mascotas directamente. Lo mismo para el veterinario del turno y para el dueño
-en "Nueva mascota".
-
-### Cómo está organizado
-
-Hasta el Sprint 7 cada HTML tenía su propio `<script>` con el mismo código repetido cuatro veces
-(alrededor de 700 de las 1.489 líneas eran copias). Ahora:
-
-| Archivo | Qué tiene |
-|---|---|
-| `app.js` | El **núcleo compartido**: `pedir()` (el único fetch), avisos, buscador con debounce, orden, panel lateral, el parseo de los errores de validación y el formato de fechas |
-| `estilos.css` | Lo poco que Bootstrap no trae: fila clickeable, flecha del orden y los ajustes de celular |
-| `duenios.js`, `mascotas.js`, `veterinarios.js`, `turnos.js` | Lo propio de cada página: sus columnas, su formulario y qué muestra su panel |
-| Los cuatro `.html` | **Sólo markup**: no tienen ni una línea de JavaScript adentro |
-
-Se cargan como scripts clásicos (`<script src="app.js">`), **no** como módulos ES: un módulo
-exige que el servidor mande el MIME correcto para `.js`, que en Windows sale del registro, y si en
-la máquina donde se muestra el TP estuviera mal, la página entera no funcionaría.
-
-> Cada página declara su propia `const URL_API`, y `app.js` **no** la declara: los dos son scripts
-> clásicos y comparten el ámbito global, así que una `const` repetida sería un `SyntaxError` que
-> impide que se ejecute nada.
-
-Para abrirlo hay que **servirlo por HTTP** (no con doble clic). Con la app corriendo en otra terminal:
-
-```bash
-# Opción A: Python (viene instalado en la mayoría de las máquinas)
-python -m http.server 5500 --directory frontend
-# y abrir http://localhost:5500/index.html
-
-# Opción B: extensión "Live Server" de VS Code
-# click derecho sobre frontend/index.html → "Open with Live Server"
-```
-
-
-
-## Tests
-
-```bash
-.\mvnw.cmd test                              # todos
-.\mvnw.cmd test "-Dtest=DuenioServiceTest"   # una sola clase
-.\mvnw.cmd test "-Dsurefire.runOrder=random" # verifica que los tests sean independientes
-```
-
-**No hace falta tener MySQL levantado**: los tests corren contra una base H2 en memoria
-(`src/test/resources/application.properties`, que reemplaza al de `src/main` en el classpath de test).
-
-| Clase | Tipo | Qué cubre |
+| Metodo | Ruta | Respuesta |
 |---|---|---|
-| `DuenioServiceTest` | Unitario (Mockito, sin Spring) | Listado, búsqueda, alta con cédula duplicada, baja inexistente y el buscador (incluido el texto vacío) |
-| `MascotaServiceTest` | Unitario (Mockito, sin Spring) | El buscador de mascotas |
-| `VeterinarioServiceTest` | Unitario (Mockito, sin Spring) | El buscador de veterinarios |
-| `TurnoServiceTest` | Unitario (Mockito, sin Spring) | Alta de turno, la regla de superposición de horarios y el filtro por estado |
-| `DuenioRepositoryTest` | Persistencia (`@DataJpaTest` sobre H2) | Que el `@Query` del buscador funcione de verdad: con Mockito el repositorio es un mock y la consulta **nunca se ejecuta** |
-| `MascotaRepositoryTest` | Persistencia (`@DataJpaTest` sobre H2) | Que el `JOIN` encuentre una mascota buscando por el apellido de su dueño |
-| `DuenioControllerTest` | Web slice (`@WebMvcTest` + MockMvc) | Contrato HTTP: 200 / 201 / 400 / 404 / 409, el buscador y los headers de CORS |
-| `TurnoControllerTest` | Web slice (`@WebMvcTest` + MockMvc) | El filtro `?estado=`, y que un estado inexistente devuelva 400 y no 500 |
-| `VeterinarioControllerTest` | Web slice (`@WebMvcTest` + MockMvc) | Que una matrícula en minúsculas se acepte (201) y que otro formato siga dando 400 |
-| `TextoUtilTest` | Unitario **sin mocks** | La normalización de nombres: mayúsculas, espacios de más, acentos, null |
-| `PaginaUtilTest` | Unitario **sin mocks** | El recorte de `pagina`/`tamanio` y la lista de campos ordenables |
-| `SwaggerDocsTest` | Contexto (`@SpringBootTest` + MockMvc) | Que `/v3/api-docs` genere la especificación con los `@Tag` y los `@Schema` |
-| `VetSystemApplicationTests` | Contexto (`@SpringBootTest` sobre H2) | Que el contexto de Spring levante y el esquema se genere |
-
-
-
-
-## Parcial 1 — Decisiones de diseño
-
-### Relación Turno–Medicamento
-Modelé la receta como un **Many-to-Many unidireccional** desde `Turno`: el turno conoce sus
-medicamentos, pero el medicamento no sabe en qué turnos se usó. Lo dejé unidireccional porque
-nadie en la app pregunta "en qué turnos se recetó este remedio", y tener las dos puntas me
-obligaría a sincronizarlas a mano. Usé `List` y no `Set` a propósito: si en un turno se recetan
-dos unidades del mismo medicamento, un `Set` descartaría la segunda en silencio y el stock ya
-habría bajado igual. La relación es `LAZY` para que listar turnos no arrastre la receta de cada
-uno. Le puse `@ToString.Exclude` y `@EqualsAndHashCode.Exclude` porque si no Lombok recorre la
-relación y se cuelga.
-
-### Validación de stock
-Recetar un medicamento descuenta una unidad de su stock, y si no hay se rechaza. La validación
-está en `TurnoService`, no en el controller ni en la entidad, porque es una regla del negocio: el
-controller solo traduce a HTTP. Comparo con `<= 0` y no con `== 0` a propósito, porque si por un
-error anterior el stock quedó negativo, con `== 0` seguiría entregando. También contemplo el
-`null`, y por eso el stock es `Integer` y no `int`: así distingo "no vino el dato" de "es cero".
-Tiro `StockInsuficienteException`, que el handler convierte en **422** con el nombre del
-medicamento y las unidades que quedan. El descuento y el alta en la receta pasan en el mismo
-método `@Transactional`, así que o se guardan los dos o no se guarda ninguno.
-
-### Solapamiento
-Un veterinario no puede tener dos turnos en la misma fecha y hora. La regla existía desde el
-Sprint 4, pero el mensaje solo decía que había superposición y no servía de mucho. Ahora, en vez
-de preguntar si existe un turno pisado, **busco el turno** y lo nombro por su id en el error, así
-el cliente sabe cuál reprogramar. El chequeo corre después de validar que existan la mascota y el
-veterinario, porque no tiene sentido buscar conflictos contra un veterinario que no existe. La
-mapeo a **409** y no a 422 porque acá sí hay otro recurso concreto ocupando el lugar. La
-comparación es por fecha y hora exactas, que es lo único que el modelo guarda: el turno no tiene
-duración, así que no habría con qué calcular un rango.
-
-### Cupo de mascotas
-Un dueño no puede tener más de **5 mascotas activas**, y el límite es una constante de
-`MascotaService`, no un número suelto repetido. El control va en el alta, antes de armar la
-entidad, porque lo barato es no crearla. Cuento con `countByDuenioId`, que resuelve el total en la
-base, en vez de traer todas las mascotas para hacerles `size()`. Uso `>= 5` y no `> 5`: con el
-mayor estricto el dueño terminaría llegando a seis. Acá "mascota activa" es toda fila que existe,
-porque la baja es física y no hay bandera de estado; si algún día se agrega borrado lógico, el
-único cambio sería el método del repositorio. Cuando se pasa, `CupoExcedidoException` → **422**
-con el id del dueño, cuántas tiene y cuál es el máximo.
-
-### Decisión más difícil
-
-La que más me costó fue elegir entre `List` y `Set` para los medicamentos del turno. `Set` parecía
-lo correcto: evita duplicados y es lo que uno espera de una N a N. El problema es que en este
-dominio el duplicado **significa algo**: dos veces el mismo medicamento es que se entregaron dos
-unidades. Con `Set` la segunda se descartaba sin avisar y el stock ya había bajado, o sea que la
-base decía una cosa y la farmacia otra. Preferí `List` y que la colección refleje lo que
-realmente pasó, aunque eso deje el control del stock del lado del service. La otra duda fue qué
-código devolver cuando falla una regla: terminé usando 409 cuando hay otro recurso en conflicto
-(el turno ocupado) y 422 cuando lo que no se cumple es una condición del dominio (stock, cupo).
+| GET | /api/duenios | 200 lista de duenios |
+| GET | /api/duenios/{id} | 200, o 404 si no existe |
+| POST | /api/duenios | 201, 400 si faltan datos, 409 si el email ya existe |
+| PUT | /api/duenios/{id} | 200, 404 o 409 |
+| DELETE | /api/duenios/{id} | 204, o 404 si no existe |
