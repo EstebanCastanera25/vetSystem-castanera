@@ -20,6 +20,7 @@
 	<modules>
 		<module>ms-duenio</module>
 		<module>ms-mascota</module>
+		<module>ms-veterinario</module>
 	</modules>
 
 	<properties>
