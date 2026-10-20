@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: ms-mascota
+  datasource:
+    url: jdbc:mysql://localhost:3306/mascota_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+server:
+  port: 8082
