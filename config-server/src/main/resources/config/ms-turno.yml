@@ -3,3 +3,9 @@ spring:
     url: jdbc:mysql://localhost:3306/turno_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: root
+
+info:
+  app:
+    name: ms-turno
+    description: Microservicio de gestion de turnos - Patitas Felices
+    version: 1.0.0

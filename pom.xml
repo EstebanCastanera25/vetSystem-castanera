@@ -33,6 +33,14 @@
 		<spring-cloud.version>2025.1.3</spring-cloud.version>
 	</properties>
 
+	<!-- actuator lo usan todos los modulos -->
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+	</dependencies>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
