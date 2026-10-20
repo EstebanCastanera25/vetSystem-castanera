@@ -1,6 +1,9 @@
 package com.patitas.turno.adapter.in.web;
 
+import com.patitas.turno.domain.exception.MascotaNotFoundException;
 import com.patitas.turno.domain.exception.TurnoNotFoundException;
+import com.patitas.turno.domain.exception.VeterinarioNotFoundException;
+import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TurnoNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(TurnoNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    // la mascota no existe en ms-mascota -> 404
+    @ExceptionHandler(MascotaNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleMascota(MascotaNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    // el veterinario no existe en ms-veterinario -> 404
+    @ExceptionHandler(VeterinarioNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleVeterinario(VeterinarioNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    // el otro microservicio esta caido o tardo demasiado -> 503
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ErrorResponse> handleFeign(FeignException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Servicio remoto no disponible: " + ex.getMessage(), request);
     }
 
     // fallo @Valid -> 400 con los mensajes de cada campo
