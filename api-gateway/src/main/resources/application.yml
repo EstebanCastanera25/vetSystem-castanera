@@ -44,6 +44,13 @@ spring:
               uri: lb://ms-turno
               predicates:
                 - Path=/api/turnos/**
+            # version publica de la api: /v1/duenios/... se reescribe a /api/duenios/... antes de mandarlo a ms-duenio
+            - id: ms-duenio-v1
+              uri: lb://ms-duenio
+              predicates:
+                - Path=/v1/duenios/**
+              filters:
+                - RewritePath=/v1/duenios(?<segment>/?.*), /api/duenios${segment}
 
 eureka:
   client:
