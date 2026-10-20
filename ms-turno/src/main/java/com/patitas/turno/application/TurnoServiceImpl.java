@@ -1,10 +1,14 @@
 package com.patitas.turno.application;
 
+import com.patitas.turno.domain.exception.MascotaNotFoundException;
 import com.patitas.turno.domain.exception.TurnoNotFoundException;
+import com.patitas.turno.domain.exception.VeterinarioNotFoundException;
 import com.patitas.turno.domain.model.EstadoTurno;
 import com.patitas.turno.domain.model.Turno;
 import com.patitas.turno.domain.port.in.TurnoService;
+import com.patitas.turno.domain.port.out.MascotaServicePort;
 import com.patitas.turno.domain.port.out.TurnoRepository;
+import com.patitas.turno.domain.port.out.VeterinarioServicePort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +19,14 @@ import java.util.Optional;
 public class TurnoServiceImpl implements TurnoService {
 
     private final TurnoRepository turnoRepository;
+    private final MascotaServicePort mascotaService;
+    private final VeterinarioServicePort veterinarioService;
 
-    public TurnoServiceImpl(TurnoRepository turnoRepository) {
+    public TurnoServiceImpl(TurnoRepository turnoRepository, MascotaServicePort mascotaService,
+                            VeterinarioServicePort veterinarioService) {
         this.turnoRepository = turnoRepository;
+        this.mascotaService = mascotaService;
+        this.veterinarioService = veterinarioService;
     }
 
     @Override
@@ -47,6 +56,13 @@ public class TurnoServiceImpl implements TurnoService {
     @Override
     @Transactional
     public Turno save(Turno turno) {
+        // la mascota y el veterinario estan en otros microservicios, se consultan por feign
+        if (!mascotaService.existsById(turno.getMascotaId())) {
+            throw new MascotaNotFoundException(turno.getMascotaId());
+        }
+        if (!veterinarioService.existsById(turno.getVeterinarioId())) {
+            throw new VeterinarioNotFoundException(turno.getVeterinarioId());
+        }
         turno.setEstado(EstadoTurno.PENDIENTE);
         return turnoRepository.save(turno);
     }
