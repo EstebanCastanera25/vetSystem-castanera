@@ -21,6 +21,7 @@
 		<module>ms-duenio</module>
 		<module>ms-mascota</module>
 		<module>ms-veterinario</module>
+		<module>ms-turno</module>
 	</modules>
 
 	<properties>
