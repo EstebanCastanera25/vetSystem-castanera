@@ -13,6 +13,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import com.patitas.turno.domain.exception.ServicioNoDisponibleException;
+
 
 import java.time.LocalDateTime;
 
@@ -35,6 +37,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(VeterinarioNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleVeterinario(VeterinarioNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    // el circuit breaker corto la llamada (servicio caido o circuito abierto) -> 503
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ResponseEntity<ErrorResponse> handleServicioNoDisponible(ServicioNoDisponibleException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
 
     // el otro microservicio esta caido o tardo demasiado -> 503
