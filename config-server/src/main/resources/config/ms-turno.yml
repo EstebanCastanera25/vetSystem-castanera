@@ -28,3 +28,14 @@ info:
     name: ms-turno
     description: Microservicio de gestion de turnos - Patitas Felices
     version: 1.0.0
+
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,beans,mappings,circuitbreakers,circuitbreakerevents
+  health:
+    circuitbreakers:
+      enabled: true
