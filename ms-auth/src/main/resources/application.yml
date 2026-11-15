@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: ms-auth
+  config:
+    # el resto de la configuracion (base de datos, eureka, clave jwt) viene del config-server
+    import: "optional:configserver:http://localhost:8888"
+
+server:
+  port: 8085
