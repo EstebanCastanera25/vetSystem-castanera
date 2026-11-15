@@ -119,6 +119,21 @@ Los microservicios tienen habilitados health, info, metrics, env, beans y mappin
 - http://localhost:8081/actuator/info devuelve el nombre, la descripcion y la version
 - http://localhost:8081/actuator/metrics
 
+## Circuit Breaker (Resilience4j)
+
+ms-turno llama a ms-mascota y ms-veterinario por Feign. Cada llamada tiene un circuit breaker
+(`@CircuitBreaker` en MascotaFeignAdapter y VeterinarioFeignAdapter, config en `config/ms-turno.yml`):
+
+- CLOSED: normal, cuenta exitos y fallos en una ventana de 10 llamadas.
+- OPEN: si falla el 50% (minimo 5 llamadas) deja de llamar al servicio y responde al instante con el fallback.
+- HALF_OPEN: a los 10 segundos deja pasar 3 llamadas de prueba; si andan vuelve a CLOSED, si no a OPEN.
+
+El fallback lanza `ServicioNoDisponibleException` y el GlobalExceptionHandler responde 503 con el nombre del servicio.
+El 404 (mascota o veterinario inexistente) no cuenta como fallo.
+
+Estado en vivo: http://localhost:8084/actuator/circuitbreakers y http://localhost:8084/actuator/circuitbreakerevents
+
+
 ## Endpoints
 
 Todos se llaman por el gateway (`http://localhost:8080`).
