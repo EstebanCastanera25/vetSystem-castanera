@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/patitas_auth?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+
+# clave para firmar los tokens: minimo 32 caracteres (256 bits) y la MISMA que en api-gateway.yml
+jwt:
+  secret: patitas-felices-secret-key-2026-muy-larga-para-ser-segura
+
+info:
+  app:
+    name: ms-auth
+    description: Microservicio de autenticacion con JWT - Patitas Felices
+    version: 1.0.0
