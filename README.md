@@ -133,6 +133,19 @@ El 404 (mascota o veterinario inexistente) no cuenta como fallo.
 
 Estado en vivo: http://localhost:8084/actuator/circuitbreakers y http://localhost:8084/actuator/circuitbreakerevents
 
+## Seguridad con JWT (ms-auth)
+
+- ms-auth (puerto 8085, base patitas_auth) registra usuarios con la contrasenia en BCrypt y devuelve un token JWT
+  (HS256, claims sub = usuario, rol, iat y exp a 24 horas).
+  - POST /auth/register {username, password, rol} -> 200 {token}, 409 si ya existe
+  - POST /auth/login {username, password} -> 200 {token}, 401 si las credenciales no son validas
+- El api-gateway tiene un filtro global (AuthenticationFilter) que valida el token de cada pedido:
+  /auth/** es publico; el resto necesita `Authorization: Bearer <token>`, si no responde 401 sin llegar al microservicio.
+  Si el token es valido agrega los headers X-Auth-User y X-Auth-Rol.
+- La clave jwt.secret es la misma en config/ms-auth.yml (firma) y config/api-gateway.yml (verifica).
+- Los microservicios de negocio no validan tokens: confian en el gateway.
+
+
 
 ## Endpoints
 
