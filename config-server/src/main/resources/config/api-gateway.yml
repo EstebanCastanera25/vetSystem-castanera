@@ -24,6 +24,11 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
+            # login y registro: publicas, el AuthenticationFilter las deja pasar sin token
+            - id: ms-auth
+              uri: lb://ms-auth
+              predicates:
+                - Path=/auth/**
             - id: ms-duenio
               uri: lb://ms-duenio
               predicates:
@@ -57,3 +62,8 @@ management:
     gateway:
       # read-only: se pueden ver las rutas pero no crear ni borrar rutas por http
       access: read-only
+
+# la MISMA clave que en ms-auth.yml: ms-auth firma los tokens y el gateway verifica la firma
+jwt:
+  secret: patitas-felices-secret-key-2026
+
