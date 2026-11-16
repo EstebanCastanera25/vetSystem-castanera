@@ -29,7 +29,30 @@ info:
     description: Microservicio de gestion de turnos - Patitas Felices
     version: 1.0.0
 
-
+# circuit breaker: un "disyuntor" por cada microservicio al que llama ms-turno
+resilience4j:
+  circuitbreaker:
+    instances:
+      ms-mascota:
+        # mira las ultimas 10 llamadas
+        sliding-window-size: 10
+        # no decide nada hasta tener al menos 5 llamadas
+        minimum-number-of-calls: 5
+        # si falla el 50% o mas, el circuito se abre (OPEN)
+        failure-rate-threshold: 50
+        # queda abierto 10 segundos y despues pasa a HALF_OPEN
+        wait-duration-in-open-state: 10s
+        # en HALF_OPEN deja pasar 3 llamadas de prueba
+        permitted-number-of-calls-in-half-open-state: 3
+        # muestra el estado del circuito en /actuator/health
+        register-health-indicator: true
+      ms-veterinario:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        register-health-indicator: true
 
 management:
   endpoints:
